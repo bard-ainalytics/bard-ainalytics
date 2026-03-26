@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!--
+    SECURITY NOTE: Content-Security-Policy should be set as an HTTP header by your server,
+    not just here as a meta tag. This is a front-end starter approximation only.
+    In production, configure CSP, HSTS, X-Frame-Options, X-Content-Type-Options,
+    and Referrer-Policy as HTTP response headers.
+  -->
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://fonts.googleapis.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.gstatic.com https://cdn.tailwindcss.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self';" />
+  <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+  <meta http-equiv="X-Frame-Options" content="DENY" />
+  <meta name="referrer" content="strict-origin-when-cross-origin" />
+  <title>BARD AInalytics — Precision Health Economics &amp; Outcomes Research</title>
+  <meta name="description" content="BARD AInalytics empowers researchers to conduct complex HEOR studies with AI-driven rigor, transparency, and speed." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            teal: {
+              50:  '#f0fdfa',
+              100: '#ccfbf1',
+              200: '#99f6e4',
+              300: '#5eead4',
+              400: '#2dd4bf',
+              500: '#14b8a6',
+              600: '#0f7b8e',
+              700: '#0e6e7f',
+              800: '#0a2a2e',
+              900: '#071e22',
+            },
+            accent: '#00C2A8',
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            display: ['Space Grotesk', 'sans-serif'],
+          },
+        }
+      }
+    }
+  </script>
+  <style>
+    /* Custom gradient and animation utilities */
+    .hero-gradient {
+      background: linear-gradient(135deg, #0a2a2e 0%, #0f7b8e 50%, #00C2A8 100%);
+    }
+    .card-hover {
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .card-hover:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 20px 40px rgba(15, 123, 142, 0.15);
+    }
+    .glow {
+      box-shadow: 0 0 30px rgba(0, 194, 168, 0.3);
+    }
+    .step-line::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 100%;
+      width: 100%;
+      height: 2px;
+      background: linear-gradient(90deg, #0f7b8e, transparent);
+    }
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .animate-fadeInUp { animation: fadeInUp 0.6s ease forwards; }
+    .nav-link { position: relative; }
+    .nav-link::after {
+      content: '';
+      position: absolute;
+      bottom: -4px; left: 0; width: 0; height: 2px;
+      background: #00C2A8;
+      transition: width 0.2s ease;
+    }
+    .nav-link:hover::after { width: 100%; }
+    .modal-backdrop {
+      backdrop-filter: blur(6px);
+      background: rgba(10, 42, 46, 0.7);
+    }
+  </style>
+</head>
+<body class="font-sans bg-white text-gray-900 antialiased">
+
+  <!-- ════════════════════════════════
+       NAVIGATION
+  ════════════════════════════════ -->
+  <nav id="navbar" class="fixed top-0 w-full z-50 transition-all duration-300 bg-transparent">
+    <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+      <!-- Logo -->
+      <a href="#" class="flex items-center gap-2 group">
+        <div class="w-9 h-9 rounded-lg bg-accent flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform">
+          <span class="text-white font-display font-bold text-base">B</span>
+        </div>
+        <span class="font-display font-bold text-xl text-white tracking-tight">
+          BARD <span class="text-accent">AI</span>nalytics
+        </span>
+      </a>
+
+      <!-- Nav Links -->
+      <div class="hidden md:flex items-center gap-8">
+        <a href="#features" class="nav-link text-gray-200 hover:text-white text-sm font-medium transition-colors">Features</a>
+        <a href="#how-it-works" class="nav-link text-gray-200 hover:text-white text-sm font-medium transition-colors">How It Works</a>
+        <a href="#heor-studies" class="nav-link text-gray-200 hover:text-white text-sm font-medium transition-colors">HEOR Studies</a>
+        <a href="#beta" class="nav-link text-gray-200 hover:text-white text-sm font-medium transition-colors">Request Access</a>
+      </div>
+
+      <!-- Auth buttons -->
+      <div class="flex items-center gap-3">
+        <button onclick="openLoginModal()" class="text-gray-200 hover:text-white text-sm font-medium transition-colors px-4 py-2 rounded-lg hover:bg-white/10">
+          Sign In
+        </button>
+        <button onclick="openSignupModal()" class="bg-accent hover:bg-teal-400 text-white text-sm font-semibold px-5 py-2 rounded-lg transition-colors shadow-lg">
+          Request Beta Access
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ════════════════════════════════
+       HERO SECTION
+  ════════════════════════════════ -->
+  <section class="hero-gradient min-h-screen flex items-center relative overflow-hidden">
+    <!-- Decorative background elements -->
+    <div class="absolute inset-0 overflow-hidden pointer-events-none">
+      <div class="absolute top-20 right-10 w-96 h-96 bg-accent/10 rounded-full blur-3xl"></div>
+      <div class="absolute bottom-20 left-10 w-64 h-64 bg-teal-600/20 rounded-full blur-2xl"></div>
+      <!-- Grid overlay -->
+      <div class="absolute inset-0" style="background-image: linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px); background-size: 50px 50px;"></div>
+    </div>
+
+    <div class="max-w-7xl mx-auto px-6 pt-24 pb-20 relative z-10">
+      <div class="grid lg:grid-cols-2 gap-16 items-center">
+        <div class="animate-fadeInUp">
+          <!-- Badge -->
+          <div class="inline-flex items-center gap-2 bg-white/10 border border-white/20 rounded-full px-4 py-1.5 mb-6">
+            <div class="w-2 h-2 rounded-full bg-accent animate-pulse"></div>
+            <span class="text-white text-xs font-medium tracking-wide uppercase">Now in Private Beta</span>
+          </div>
+
+          <h1 class="font-display text-5xl lg:text-6xl font-bold text-white leading-tight mb-6">
+            AI-Powered<br/>
+            <span class="text-accent">Health Economics</span><br/>
+            Research at Scale
+          </h1>
+          <p class="text-gray-200 text-lg leading-relaxed mb-8 max-w-lg">
+            BARD AInalytics enables researchers and pharma professionals to conduct rigorous
+            HEOR studies — cost-effectiveness analyses, budget impact models, PRO analyses, and
+            more — with built-in methodological guardrails and AI-assisted workflows.
+          </p>
+
+          <div class="flex flex-wrap gap-4">
+            <button onclick="openSignupModal()" class="bg-accent hover:bg-teal-400 text-white font-semibold px-8 py-3.5 rounded-xl transition-all shadow-xl hover:shadow-accent/30 hover:scale-105">
+              Request Beta Access →
+            </button>
+            <a href="#features" class="bg-white/10 hover:bg-white/20 border border-white/20 text-white font-medium px-8 py-3.5 rounded-xl transition-all">
+              Explore Features
+            </a>
+          </div>
+
+          <!-- Trust badges -->
+          <div class="mt-10 flex items-center gap-6 flex-wrap">
+            <div class="flex items-center gap-2 text-gray-300 text-sm">
+              <svg class="w-4 h-4 text-accent flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 1l2.39 4.84 5.34.77-3.86 3.76.91 5.32L10 13.27l-4.78 2.52.91-5.32L2.27 6.61l5.34-.77L10 1z" clip-rule="evenodd"/>
+              </svg>
+              ISPOR-Aligned Methods
+            </div>
+            <div class="flex items-center gap-2 text-gray-300 text-sm">
+              <svg class="w-4 h-4 text-accent flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"/>
+              </svg>
+              HIPAA-Ready Architecture
+            </div>
+            <div class="flex items-center gap-2 text-gray-300 text-sm">
+              <svg class="w-4 h-4 text-accent flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M9 4.804A7.968 7.968 0 005.5 4c-1.255 0-2.443.29-3.5.804v10A7.969 7.969 0 015.5 14c1.669 0 3.218.51 4.5 1.385A7.962 7.962 0 0114.5 14c1.255 0 2.443.29 3.5.804v-10A7.968 7.968 0 0014.5 4c-1.255 0-2.443.29-3.5.804V12a1 1 0 11-2 0V4.804z"/>
+              </svg>
+              Audit-Trail Reporting
+            </div>
+          </div>
+        </div>
+
+        <!-- Hero visual — dashboard mock -->
+        <div class="hidden lg:block relative animate-fadeInUp" style="animation-delay:0.2s">
+          <div class="bg-white/10 border border-white/20 rounded-2xl p-1 glow">
+            <div class="bg-teal-800/80 rounded-xl p-4">
+              <!-- Mock window chrome -->
+              <div class="flex items-center gap-2 mb-4">
+                <div class="w-3 h-3 rounded-full bg-red-400/70"></div>
+                <div class="w-3 h-3 rounded-full bg-yellow-400/70"></div>
+                <div class="w-3 h-3 rounded-full bg-green-400/70"></div>
+                <div class="ml-3 flex-1 bg-teal-700/50 rounded-md px-3 py-1 text-xs text-teal-300">
+                  app.bardanalytics.com/dashboard
+                </div>
+              </div>
+              <!-- Mock content -->
+              <div class="grid grid-cols-3 gap-3 mb-4">
+                <div class="bg-white/5 rounded-lg p-3">
+                  <div class="text-accent text-xs font-medium mb-1">Active Studies</div>
+                  <div class="text-white font-bold text-2xl">7</div>
+                </div>
+                <div class="bg-white/5 rounded-lg p-3">
+                  <div class="text-accent text-xs font-medium mb-1">ICER Threshold</div>
+                  <div class="text-white font-bold text-2xl">$50K</div>
+                </div>
+                <div class="bg-white/5 rounded-lg p-3">
+                  <div class="text-accent text-xs font-medium mb-1">Models Run</div>
+                  <div class="text-white font-bold text-2xl">143</div>
+                </div>
+              </div>
+              <!-- Mock chart bars -->
+              <div class="bg-white/5 rounded-lg p-3 mb-3">
+                <div class="text-gray-300 text-xs mb-2 font-medium">Cost-Effectiveness Frontier</div>
+                <div class="flex items-end gap-1 h-16">
+                  <div class="flex-1 bg-accent/60 rounded-t" style="height:40%"></div>
+                  <div class="flex-1 bg-accent/80 rounded-t" style="height:65%"></div>
+                  <div class="flex-1 bg-accent rounded-t" style="height:100%"></div>
+                  <div class="flex-1 bg-teal-400/70 rounded-t" style="height:75%"></div>
+                  <div class="flex-1 bg-teal-400/50 rounded-t" style="height:55%"></div>
+                  <div class="flex-1 bg-teal-400/40 rounded-t" style="height:30%"></div>
+                </div>
+              </div>
+              <div class="flex gap-2">
+                <div class="flex-1 bg-white/5 rounded-lg p-2.5">
+                  <div class="text-xs text-gray-400 mb-1">ICER</div>
+                  <div class="text-accent font-semibold text-sm">$42,180 / QALY</div>
+                </div>
+                <div class="flex-1 bg-white/5 rounded-lg p-2.5">
+                  <div class="text-xs text-gray-400 mb-1">NMB @ WTP</div>
+                  <div class="text-green-400 font-semibold text-sm">+$7,820</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════
+       FEATURES SECTION
+  ════════════════════════════════ -->
+  <section id="features" class="py-24 bg-white">
+    <div class="max-w-7xl mx-auto px-6">
+      <div class="text-center mb-16">
+        <span class="text-teal-600 font-semibold text-sm uppercase tracking-widest">Platform Capabilities</span>
+        <h2 class="font-display text-4xl font-bold text-teal-800 mt-3 mb-4">Built for Serious HEOR Research</h2>
+        <p class="text-gray-500 max-w-2xl mx-auto text-lg">
+          Purpose-built tools that meet the methodological standards expected by payers,
+          HTA bodies, and peer-reviewed journals — without the manual overhead.
+        </p>
+      </div>
+
+      <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+        <!-- Feature Card 1 -->
+        <div class="card-hover bg-gradient-to-br from-teal-50 to-white border border-teal-100 rounded-2xl p-6">
+          <div class="w-12 h-12 bg-teal-600 rounded-xl flex items-center justify-center mb-4">
+            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+            </svg>
+          </div>
+          <h3 class="font-display font-bold text-teal-800 text-lg mb-2">Cost-Effectiveness Analysis</h3>
+          <p class="text-gray-500 text-sm leading-relaxed">
+            Build Markov cohort and microsimulation models with automated cycle calculations,
+            transition probability estimation, and probabilistic sensitivity analysis (PSA).
+          </p>
+        </div>
+
+        <!-- Feature Card 2 -->
+        <div class="card-hover bg-gradient-to-br from-teal-50 to-white border border-teal-100 rounded-2xl p-6">
+          <div class="w-12 h-12 bg-teal-600 rounded-xl flex items-center justify-center mb-4">
+            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+          </div>
+          <h3 class="font-display font-bold text-teal-800 text-lg mb-2">Budget Impact Modeling</h3>
+          <p class="text-gray-500 text-sm leading-relaxed">
+            Project real-world budget impact for payers and health systems with
+            epidemiology-driven prevalence estimates, market uptake curves, and scenario analysis.
+          </p>
+        </div>
+
+        <!-- Feature Card 3 -->
+        <div class="card-hover bg-gradient-to-br from-teal-50 to-white border border-teal-100 rounded-2xl p-6">
+          <div class="w-12 h-12 bg-teal-600 rounded-xl flex items-center justify-center mb-4">
+            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+            </svg>
+          </div>
+          <h3 class="font-display font-bold text-teal-800 text-lg mb-2">PRO &amp; Utility Mapping</h3>
+          <p class="text-gray-500 text-sm leading-relaxed">
+            Map patient-reported outcomes (EQ-5D, SF-6D, PROMIS) to utility values and
+            automate HRQoL analysis pipelines for clinical trial data.
+          </p>
+        </div>
+
+        <!-- Feature Card 4 -->
+        <div class="card-hover bg-gradient-to-br from-teal-50 to-white border border-teal-100 rounded-2xl p-6">
+          <div class="w-12 h-12 bg-accent rounded-xl flex items-center justify-center mb-4">
+            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+            </svg>
+          </div>
+          <h3 class="font-display font-bold text-teal-800 text-lg mb-2">AI-Assisted Study Design</h3>
+          <p class="text-gray-500 text-sm leading-relaxed">
+            Our AI co-pilot guides parameter selection, flags methodological inconsistencies,
+            and suggests literature-backed assumptions aligned with ISPOR and NICE guidelines.
+          </p>
+        </div>
+
+        <!-- Feature Card 5 -->
+        <div class="card-hover bg-gradient-to-br from-teal-50 to-white border border-teal-100 rounded-2xl p-6">
+          <div class="w-12 h-12 bg-accent rounded-xl flex items-center justify-center mb-4">
+            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+            </svg>
+          </div>
+          <h3 class="font-display font-bold text-teal-800 text-lg mb-2">Collaborative Workspaces</h3>
+          <p class="text-gray-500 text-sm leading-relaxed">
+            Invite co-authors, biostatisticians, and medical writers. Role-based access ensures
+            each team member sees only what they need — with full audit trails.
+          </p>
+        </div>
+
+        <!-- Feature Card 6 -->
+        <div class="card-hover bg-gradient-to-br from-teal-50 to-white border border-teal-100 rounded-2xl p-6">
+          <div class="w-12 h-12 bg-accent rounded-xl flex items-center justify-center mb-4">
+            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+            </svg>
+          </div>
+          <h3 class="font-display font-bold text-teal-800 text-lg mb-2">Publication-Ready Reports</h3>
+          <p class="text-gray-500 text-sm leading-relaxed">
+            Auto-generate structured reports with CHEERS 2022-aligned reporting,
+            exportable model code, and one-click submission packages for HTA dossiers.
+          </p>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════
+       HOW IT WORKS
+  ════════════════════════════════ -->
+  <section id="how-it-works" class="py-24 bg-gradient-to-b from-teal-800 to-teal-900 relative overflow-hidden">
+    <div class="absolute inset-0 opacity-10" style="background-image: radial-gradient(circle at 20% 50%, #00C2A8 0%, transparent 60%), radial-gradient(circle at 80% 50%, #0f7b8e 0%, transparent 60%);"></div>
+    <div class="max-w-7xl mx-auto px-6 relative z-10">
+      <div class="text-center mb-16">
+        <span class="text-accent font-semibold text-sm uppercase tracking-widest">Workflow</span>
+        <h2 class="font-display text-4xl font-bold text-white mt-3 mb-4">From Data to Decision in 3 Steps</h2>
+        <p class="text-gray-300 max-w-2xl mx-auto text-lg">
+          Designed to match how HEOR teams actually work — not force you into a rigid workflow.
+        </p>
+      </div>
+
+      <div class="grid md:grid-cols-3 gap-8">
+        <div class="text-center">
+          <div class="w-16 h-16 bg-accent/20 border-2 border-accent rounded-2xl flex items-center justify-center mx-auto mb-5">
+            <span class="font-display text-accent font-bold text-2xl">1</span>
+          </div>
+          <h3 class="font-display text-white font-bold text-xl mb-3">Upload &amp; Configure</h3>
+          <p class="text-gray-300 text-sm leading-relaxed">
+            Import your clinical trial data, RWE datasets, or cost data. BARD validates
+            structure, flags missing values, and auto-suggests model parameters from your inputs.
+          </p>
+        </div>
+
+        <div class="text-center">
+          <div class="w-16 h-16 bg-accent/20 border-2 border-accent rounded-2xl flex items-center justify-center mx-auto mb-5">
+            <span class="font-display text-accent font-bold text-2xl">2</span>
+          </div>
+          <h3 class="font-display text-white font-bold text-xl mb-3">Run &amp; Validate</h3>
+          <p class="text-gray-300 text-sm leading-relaxed">
+            Execute your economic model with built-in PSA, DSA, and scenario analyses.
+            The AI engine cross-checks outputs against known HEOR benchmarks and highlights anomalies.
+          </p>
+        </div>
+
+        <div class="text-center">
+          <div class="w-16 h-16 bg-accent/20 border-2 border-accent rounded-2xl flex items-center justify-center mx-auto mb-5">
+            <span class="font-display text-accent font-bold text-2xl">3</span>
+          </div>
+          <h3 class="font-display text-white font-bold text-xl mb-3">Export &amp; Submit</h3>
+          <p class="text-gray-300 text-sm leading-relaxed">
+            Generate CHEERS-compliant reports, downloadable model code (R/Excel), and
+            formatted outputs ready for HTA submissions, ISPOR posters, or peer review.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════
+       HEOR STUDY TYPES
+  ════════════════════════════════ -->
+  <section id="heor-studies" class="py-24 bg-gray-50">
+    <div class="max-w-7xl mx-auto px-6">
+      <div class="text-center mb-16">
+        <span class="text-teal-600 font-semibold text-sm uppercase tracking-widest">Study Types</span>
+        <h2 class="font-display text-4xl font-bold text-teal-800 mt-3 mb-4">Every HEOR Study Type, Supported</h2>
+      </div>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div class="bg-white rounded-xl p-4 border border-teal-100 text-center card-hover">
+          <div class="text-accent text-2xl mb-2">📊</div>
+          <div class="font-semibold text-teal-800 text-sm">Cost-Utility Analysis</div>
+        </div>
+        <div class="bg-white rounded-xl p-4 border border-teal-100 text-center card-hover">
+          <div class="text-accent text-2xl mb-2">💰</div>
+          <div class="font-semibold text-teal-800 text-sm">Budget Impact Model</div>
+        </div>
+        <div class="bg-white rounded-xl p-4 border border-teal-100 text-center card-hover">
+          <div class="text-accent text-2xl mb-2">🔬</div>
+          <div class="font-semibold text-teal-800 text-sm">Network Meta-Analysis</div>
+        </div>
+        <div class="bg-white rounded-xl p-4 border border-teal-100 text-center card-hover">
+          <div class="text-accent text-2xl mb-2">📋</div>
+          <div class="font-semibold text-teal-800 text-sm">PRO Analysis</div>
+        </div>
+        <div class="bg-white rounded-xl p-4 border border-teal-100 text-center card-hover">
+          <div class="text-accent text-2xl mb-2">🔄</div>
+          <div class="font-semibold text-teal-800 text-sm">Real-World Evidence</div>
+        </div>
+        <div class="bg-white rounded-xl p-4 border border-teal-100 text-center card-hover">
+          <div class="text-accent text-2xl mb-2">📈</div>
+          <div class="font-semibold text-teal-800 text-sm">Disease Modeling</div>
+        </div>
+        <div class="bg-white rounded-xl p-4 border border-teal-100 text-center card-hover">
+          <div class="text-accent text-2xl mb-2">⚖️</div>
+          <div class="font-semibold text-teal-800 text-sm">Risk Sharing Analysis</div>
+        </div>
+        <div class="bg-white rounded-xl p-4 border border-teal-100 text-center card-hover">
+          <div class="text-accent text-2xl mb-2">🧪</div>
+          <div class="font-semibold text-teal-800 text-sm">Survival Analysis</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════
+       SECURITY CALLOUT
+  ════════════════════════════════ -->
+  <section class="py-20 bg-white">
+    <div class="max-w-7xl mx-auto px-6">
+      <div class="bg-teal-800 rounded-3xl p-10 md:p-16 grid md:grid-cols-2 gap-12 items-center">
+        <div>
+          <span class="text-accent font-semibold text-sm uppercase tracking-widest">Security &amp; Compliance</span>
+          <h2 class="font-display text-3xl font-bold text-white mt-3 mb-5">
+            Enterprise-Grade Security for Sensitive Health Data
+          </h2>
+          <p class="text-gray-300 leading-relaxed mb-6">
+            Health economic data often involves proprietary clinical trial results and
+            patient-level data. BARD AInalytics is designed with HIPAA-readiness, end-to-end
+            encryption, and comprehensive audit logging from the ground up.
+          </p>
+          <div class="grid grid-cols-2 gap-4">
+            <div class="flex items-start gap-2">
+              <div class="w-5 h-5 rounded-full bg-accent/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <div class="w-2 h-2 rounded-full bg-accent"></div>
+              </div>
+              <span class="text-gray-300 text-sm">AES-256 data encryption at rest</span>
+            </div>
+            <div class="flex items-start gap-2">
+              <div class="w-5 h-5 rounded-full bg-accent/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <div class="w-2 h-2 rounded-full bg-accent"></div>
+              </div>
+              <span class="text-gray-300 text-sm">TLS 1.3 in transit</span>
+            </div>
+            <div class="flex items-start gap-2">
+              <div class="w-5 h-5 rounded-full bg-accent/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <div class="w-2 h-2 rounded-full bg-accent"></div>
+              </div>
+              <span class="text-gray-300 text-sm">MFA for all accounts</span>
+            </div>
+            <div class="flex items-start gap-2">
+              <div class="w-5 h-5 rounded-full bg-accent/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <div class="w-2 h-2 rounded-full bg-accent"></div>
+              </div>
+              <span class="text-gray-300 text-sm">Role-based access control</span>
+            </div>
+            <div class="flex items-start gap-2">
+              <div class="w-5 h-5 rounded-full bg-accent/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <div class="w-2 h-2 rounded-full bg-accent"></div>
+              </div>
+              <span class="text-gray-300 text-sm">Complete audit trail logging</span>
+            </div>
+            <div class="flex items-start gap-2">
+              <div class="w-5 h-5 rounded-full bg-accent/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <div class="w-2 h-2 rounded-full bg-accent"></div>
+              </div>
+              <span class="text-gray-300 text-sm">SOC 2 Type II (roadmap)</span>
+            </div>
+          </div>
+        </div>
+        <div class="flex flex-col gap-4">
+          <div class="bg-white/10 border border-white/20 rounded-xl p-5">
+            <div class="flex items-center gap-3 mb-2">
+              <div class="w-8 h-8 bg-accent/20 rounded-lg flex items-center justify-center">
+                <svg class="w-4 h-4 text-accent" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                </svg>
+              </div>
+              <span class="text-white font-semibold text-sm">HIPAA-Ready Infrastructure</span>
+            </div>
+            <p class="text-gray-400 text-xs">Business Associate Agreements available for enterprise clients handling PHI.</p>
+          </div>
+          <div class="bg-white/10 border border-white/20 rounded-xl p-5">
+            <div class="flex items-center gap-3 mb-2">
+              <div class="w-8 h-8 bg-accent/20 rounded-lg flex items-center justify-center">
+                <svg class="w-4 h-4 text-accent" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M10 2a5 5 0 00-5 5v2a2 2 0 00-2 2v5a2 2 0 002 2h10a2 2 0 002-2v-5a2 2 0 00-2-2H7V7a3 3 0 015.905-.75 1 1 0 001.937-.5A5.002 5.002 0 0010 2z"/>
+                </svg>
+              </div>
+              <span class="text-white font-semibold text-sm">Zero-Trust Access Model</span>
+            </div>
+            <p class="text-gray-400 text-xs">Every API request is authenticated and authorized. No implicit trust between services.</p>
+          </div>
+          <div class="bg-white/10 border border-white/20 rounded-xl p-5">
+            <div class="flex items-center gap-3 mb-2">
+              <div class="w-8 h-8 bg-accent/20 rounded-lg flex items-center justify-center">
+                <svg class="w-4 h-4 text-accent" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h4a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd"/>
+                </svg>
+              </div>
+              <span class="text-white font-semibold text-sm">Immutable Audit Logs</span>
+            </div>
+            <p class="text-gray-400 text-xs">Every model run, parameter change, and data access is logged and tamper-evident.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════
+       BETA SIGNUP CTA
+  ════════════════════════════════ -->
+  <section id="beta" class="py-24 bg-gradient-to-br from-teal-50 to-white">
+    <div class="max-w-3xl mx-auto px-6 text-center">
+      <div class="inline-flex items-center gap-2 bg-accent/10 border border-accent/30 rounded-full px-4 py-1.5 mb-6">
+        <div class="w-2 h-2 rounded-full bg-accent animate-pulse"></div>
+        <span class="text-teal-700 text-xs font-medium tracking-wide uppercase">Limited Beta Spots Available</span>
+      </div>
+      <h2 class="font-display text-4xl font-bold text-teal-800 mb-5">
+        Join the BARD AInalytics Beta
+      </h2>
+      <p class="text-gray-500 text-lg mb-10">
+        We're onboarding a small cohort of HEOR researchers and pharma teams to test
+        the platform and shape its roadmap. Accepted beta users get free access during the beta period.
+      </p>
+
+      <form id="betaForm" onsubmit="handleBetaSignup(event)" class="flex flex-col sm:flex-row gap-3 max-w-lg mx-auto">
+        <!-- NOTE: In production, this form must be submitted over HTTPS to your backend.
+             Implement CSRF tokens, server-side email validation, and rate limiting.
+             Never log email addresses in plain text. -->
+        <input
+          type="email"
+          id="betaEmail"
+          placeholder="your@institution.edu"
+          required
+          class="flex-1 border border-gray-200 rounded-xl px-5 py-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition"
+          autocomplete="email"
+        />
+        <button type="submit" class="bg-teal-600 hover:bg-teal-700 text-white font-semibold px-8 py-3.5 rounded-xl transition-colors shadow-lg whitespace-nowrap">
+          Request Access
+        </button>
+      </form>
+      <p id="betaSuccess" class="hidden text-accent font-medium mt-4">
+        ✓ You're on the list! We'll be in touch shortly.
+      </p>
+      <p class="text-gray-400 text-xs mt-4">No spam. No credit card required. Unsubscribe anytime.</p>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════
+       FOOTER
+  ════════════════════════════════ -->
+  <footer class="bg-teal-900 text-gray-300 py-12">
+    <div class="max-w-7xl mx-auto px-6">
+      <div class="grid md:grid-cols-4 gap-8 mb-8">
+        <div class="md:col-span-2">
+          <div class="flex items-center gap-2 mb-3">
+            <div class="w-8 h-8 rounded-lg bg-accent flex items-center justify-center">
+              <span class="text-white font-display font-bold text-sm">B</span>
+            </div>
+            <span class="font-display font-bold text-lg text-white">BARD <span class="text-accent">AI</span>nalytics</span>
+          </div>
+          <p class="text-gray-400 text-sm leading-relaxed max-w-xs">
+            Enabling robust, reproducible, and AI-assisted health economics and outcomes research for the modern pharma era.
+          </p>
+        </div>
+        <div>
+          <h4 class="text-white font-semibold text-sm mb-3">Product</h4>
+          <ul class="space-y-2 text-sm">
+            <li><a href="#features" class="hover:text-accent transition-colors">Features</a></li>
+            <li><a href="#how-it-works" class="hover:text-accent transition-colors">How It Works</a></li>
+            <li><a href="#beta" class="hover:text-accent transition-colors">Beta Program</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4 class="text-white font-semibold text-sm mb-3">Legal</h4>
+          <ul class="space-y-2 text-sm">
+            <li><a href="#" class="hover:text-accent transition-colors">Privacy Policy</a></li>
+            <li><a href="#" class="hover:text-accent transition-colors">Terms of Service</a></li>
+            <li><a href="#" class="hover:text-accent transition-colors">Security</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="border-t border-teal-800 pt-6 flex flex-col md:flex-row justify-between items-center gap-3">
+        <p class="text-gray-500 text-xs">© 2026 BARD AInalytics. All rights reserved.</p>
+        <p class="text-gray-500 text-xs">Built for HEOR researchers. Designed for payer submission.</p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ════════════════════════════════
+       AUTH MODAL
+  ════════════════════════════════ -->
+  <div id="authModal" class="fixed inset-0 z-50 hidden items-center justify-center modal-backdrop">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-8 relative animate-fadeInUp">
+
+      <!-- Close button -->
+      <button onclick="closeModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+
+      <!-- Logo -->
+      <div class="flex items-center gap-2 mb-6">
+        <div class="w-8 h-8 rounded-lg bg-teal-600 flex items-center justify-center">
+          <span class="text-white font-display font-bold text-sm">B</span>
+        </div>
+        <span class="font-display font-bold text-lg text-teal-800">BARD <span class="text-accent">AI</span>nalytics</span>
+      </div>
+
+      <!-- Tab switcher -->
+      <div class="flex bg-gray-100 rounded-xl p-1 mb-6">
+        <button id="loginTab" onclick="switchTab('login')"
+          class="flex-1 py-2 rounded-lg text-sm font-semibold transition-all bg-white text-teal-700 shadow-sm">
+          Sign In
+        </button>
+        <button id="signupTab" onclick="switchTab('signup')"
+          class="flex-1 py-2 rounded-lg text-sm font-semibold transition-all text-gray-500">
+          Request Access
+        </button>
+      </div>
+
+      <!-- Login Form -->
+      <div id="loginForm">
+        <h2 class="font-display text-2xl font-bold text-teal-800 mb-1">Welcome back</h2>
+        <p class="text-gray-400 text-sm mb-6">Sign in to your research workspace</p>
+        <!--
+          SECURITY NOTES FOR PRODUCTION:
+          1. Use HTTPS only — redirect HTTP → HTTPS at server level
+          2. Implement CSRF tokens on all state-changing forms
+          3. Use HttpOnly, Secure, SameSite=Strict cookies for session tokens
+          4. Implement rate limiting on login endpoint (e.g. 5 attempts / 15 min per IP)
+          5. Never expose whether email exists in error messages (use generic errors)
+          6. Use a managed auth provider (Auth0, Clerk) rather than rolling your own
+          7. Log all login attempts with IP address, user agent, and timestamp
+        -->
+        <form onsubmit="handleLogin(event)" class="space-y-4">
+          <div>
+            <label class="text-sm font-medium text-gray-700 block mb-1.5">Work email</label>
+            <input type="email" id="loginEmail" required
+              class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 transition"
+              placeholder="you@pharma.com" autocomplete="username" />
+          </div>
+          <div>
+            <div class="flex justify-between mb-1.5">
+              <label class="text-sm font-medium text-gray-700">Password</label>
+              <a href="#" class="text-xs text-teal-600 hover:underline">Forgot password?</a>
+            </div>
+            <input type="password" id="loginPassword" required
+              class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 transition"
+              placeholder="••••••••" autocomplete="current-password" />
+          </div>
+          <div class="flex items-center gap-2">
+            <input type="checkbox" id="mfaPrompt" class="rounded border-gray-300 text-teal-600" />
+            <label for="mfaPrompt" class="text-sm text-gray-500">This is a shared or public device</label>
+          </div>
+          <button type="submit"
+            class="w-full bg-teal-600 hover:bg-teal-700 text-white font-semibold py-3 rounded-xl transition-colors shadow-lg mt-2">
+            Sign In
+          </button>
+        </form>
+
+        <div class="relative my-5">
+          <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-gray-200"></div></div>
+          <div class="relative flex justify-center"><span class="bg-white px-3 text-xs text-gray-400">or continue with</span></div>
+        </div>
+
+        <button onclick="handleSSO('google')"
+          class="w-full flex items-center justify-center gap-3 border border-gray-200 rounded-xl py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+          <svg class="w-4 h-4" viewBox="0 0 24 24">
+            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+          </svg>
+          Sign in with Google (SSO)
+        </button>
+
+        <p id="loginError" class="hidden text-red-500 text-xs mt-3 text-center"></p>
+      </div>
+
+      <!-- Signup Form -->
+      <div id="signupForm" class="hidden">
+        <h2 class="font-display text-2xl font-bold text-teal-800 mb-1">Request Beta Access</h2>
+        <p class="text-gray-400 text-sm mb-6">We'll review your request and get back to you within 2 business days.</p>
+        <form onsubmit="handleSignup(event)" class="space-y-4">
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="text-sm font-medium text-gray-700 block mb-1.5">First name</label>
+              <input type="text" required
+                class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 transition"
+                placeholder="Jane" autocomplete="given-name" />
+            </div>
+            <div>
+              <label class="text-sm font-medium text-gray-700 block mb-1.5">Last name</label>
+              <input type="text" required
+                class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 transition"
+                placeholder="Smith" autocomplete="family-name" />
+            </div>
+          </div>
+          <div>
+            <label class="text-sm font-medium text-gray-700 block mb-1.5">Work email</label>
+            <input type="email" required
+              class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 transition"
+              placeholder="you@pharma.com" autocomplete="work email" />
+          </div>
+          <div>
+            <label class="text-sm font-medium text-gray-700 block mb-1.5">Organisation</label>
+            <input type="text" required
+              class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 transition"
+              placeholder="Pharma Corp / University / CRO" />
+          </div>
+          <div>
+            <label class="text-sm font-medium text-gray-700 block mb-1.5">Primary HEOR focus area</label>
+            <select class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 transition text-gray-700">
+              <option value="">Select...</option>
+              <option>Cost-Effectiveness Analysis</option>
+              <option>Budget Impact Modeling</option>
+              <option>Real-World Evidence</option>
+              <option>PRO / HRQoL Analysis</option>
+              <option>Network Meta-Analysis</option>
+              <option>Other</option>
+            </select>
+          </div>
+          <button type="submit"
+            class="w-full bg-teal-600 hover:bg-teal-700 text-white font-semibold py-3 rounded-xl transition-colors shadow-lg">
+            Submit Request
+          </button>
+        </form>
+        <p id="signupSuccess" class="hidden text-accent font-medium text-sm mt-3 text-center">
+          ✓ Request received! We'll review and reach out shortly.
+        </p>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════
+       JAVASCRIPT
+  ════════════════════════════════ -->
+  <script>
+    // ── Navbar scroll effect ──────────────────────────────
+    window.addEventListener('scroll', () => {
+      const nav = document.getElementById('navbar');
+      if (window.scrollY > 50) {
+        nav.classList.remove('bg-transparent');
+        nav.classList.add('bg-teal-900', 'shadow-xl');
+      } else {
+        nav.classList.add('bg-transparent');
+        nav.classList.remove('bg-teal-900', 'shadow-xl');
+      }
+    });
+
+    // ── Modal controls ────────────────────────────────────
+    function openLoginModal() {
+      switchTab('login');
+      document.getElementById('authModal').classList.remove('hidden');
+      document.getElementById('authModal').classList.add('flex');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function openSignupModal() {
+      switchTab('signup');
+      document.getElementById('authModal').classList.remove('hidden');
+      document.getElementById('authModal').classList.add('flex');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeModal() {
+      document.getElementById('authModal').classList.add('hidden');
+      document.getElementById('authModal').classList.remove('flex');
+      document.body.style.overflow = '';
+    }
+
+    // Close modal on backdrop click
+    document.getElementById('authModal').addEventListener('click', (e) => {
+      if (e.target === document.getElementById('authModal')) closeModal();
+    });
+
+    // Close modal on Escape key
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeModal();
+    });
+
+    function switchTab(tab) {
+      const loginTab = document.getElementById('loginTab');
+      const signupTab = document.getElementById('signupTab');
+      const loginForm = document.getElementById('loginForm');
+      const signupForm = document.getElementById('signupForm');
+
+      if (tab === 'login') {
+        loginTab.classList.add('bg-white', 'text-teal-700', 'shadow-sm');
+        loginTab.classList.remove('text-gray-500');
+        signupTab.classList.remove('bg-white', 'text-teal-700', 'shadow-sm');
+        signupTab.classList.add('text-gray-500');
+        loginForm.classList.remove('hidden');
+        signupForm.classList.add('hidden');
+      } else {
+        signupTab.classList.add('bg-white', 'text-teal-700', 'shadow-sm');
+        signupTab.classList.remove('text-gray-500');
+        loginTab.classList.remove('bg-white', 'text-teal-700', 'shadow-sm');
+        loginTab.classList.add('text-gray-500');
+        signupForm.classList.remove('hidden');
+        loginForm.classList.add('hidden');
+      }
+    }
+
+    // ── Login handler ─────────────────────────────────────
+    // DEMO ONLY: In production, POST credentials to your backend API over HTTPS.
+    // Never send passwords in query parameters or store them client-side.
+    // Use an auth provider (Auth0/Clerk) and receive a short-lived JWT.
+    function handleLogin(e) {
+      e.preventDefault();
+      const email = document.getElementById('loginEmail').value.trim();
+      // Demo: redirect to dashboard for any beta user email
+      // In production: validate with backend, receive JWT, store in HttpOnly cookie
+      if (email) {
+        window.location.href = 'dashboard.html';
+      } else {
+        const err = document.getElementById('loginError');
+        err.textContent = 'Please check your credentials and try again.';
+        err.classList.remove('hidden');
+      }
+    }
+
+    function handleSSO(provider) {
+      // In production: initiate OAuth2 PKCE flow with your auth provider
+      // Never use implicit flow — always use Authorization Code + PKCE
+      alert(`SSO with ${provider} will be wired to your auth provider (Auth0/Clerk) in production.`);
+    }
+
+    function handleSignup(e) {
+      e.preventDefault();
+      // In production: POST to /api/beta-requests with CSRF token
+      // Validate server-side, rate-limit by IP, store in DB, send confirmation email
+      document.getElementById('signupSuccess').classList.remove('hidden');
+    }
+
+    // ── Beta form ─────────────────────────────────────────
+    function handleBetaSignup(e) {
+      e.preventDefault();
+      // In production: POST email to /api/waitlist with CSRF protection and rate limiting
+      document.getElementById('betaForm').classList.add('hidden');
+      document.getElementById('betaSuccess').classList.remove('hidden');
+    }
+
+    // ── Smooth scroll ─────────────────────────────────────
+    document.querySelectorAll('a[href^="#"]').forEach(a => {
+      a.addEventListener('click', (e) => {
+        const target = document.querySelector(a.getAttribute('href'));
+        if (target) {
+          e.preventDefault();
+          target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      });
+    });
+  </script>
+
+</body>
+</html>

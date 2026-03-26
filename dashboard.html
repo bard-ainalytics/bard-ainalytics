@@ -1,0 +1,972 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!--
+    SECURITY NOTE: All HTTP security headers below should also be set as server-level
+    response headers in production — they are more reliable there than as meta tags.
+    Required server headers:
+      Strict-Transport-Security: max-age=63072000; includeSubDomains; preload
+      X-Frame-Options: DENY
+      X-Content-Type-Options: nosniff
+      Referrer-Policy: strict-origin-when-cross-origin
+      Permissions-Policy: camera=(), microphone=(), geolocation=()
+      Content-Security-Policy: (configure appropriately for your CDN/APIs)
+  -->
+  <meta http-equiv="X-Frame-Options" content="DENY" />
+  <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+  <title>Dashboard — BARD AInalytics</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            teal: {
+              50: '#f0fdfa', 100: '#ccfbf1', 200: '#99f6e4', 300: '#5eead4',
+              400: '#2dd4bf', 500: '#14b8a6', 600: '#0f7b8e', 700: '#0e6e7f',
+              800: '#0a2a2e', 900: '#071e22',
+            },
+            accent: '#00C2A8',
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            display: ['Space Grotesk', 'sans-serif'],
+          },
+        }
+      }
+    }
+  </script>
+  <style>
+    .sidebar-link { transition: all 0.15s ease; }
+    .sidebar-link:hover, .sidebar-link.active {
+      background: rgba(0, 194, 168, 0.15);
+      color: #00C2A8;
+    }
+    .sidebar-link.active { border-left: 3px solid #00C2A8; }
+    .status-pill { padding: 2px 10px; border-radius: 999px; font-size: 0.7rem; font-weight: 600; }
+    .drag-active { border-color: #00C2A8 !important; background: rgba(0, 194, 168, 0.05); }
+    @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+    .panel { animation: fadeIn 0.2s ease; }
+    .modal-backdrop { backdrop-filter: blur(4px); background: rgba(10, 42, 46, 0.6); }
+    input[type="file"] { display: none; }
+    .table-row:hover { background: #f0fdfa; }
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-thumb { background: #ccfbf1; border-radius: 2px; }
+  </style>
+</head>
+<body class="font-sans bg-gray-50 text-gray-900 antialiased h-screen flex overflow-hidden">
+
+  <!-- ════════════════════════════════
+       SIDEBAR
+  ════════════════════════════════ -->
+  <aside id="sidebar" class="w-60 bg-teal-900 flex flex-col h-full flex-shrink-0 relative z-20">
+    <!-- Logo -->
+    <div class="px-5 py-5 border-b border-teal-800">
+      <a href="index.html" class="flex items-center gap-2 group">
+        <div class="w-8 h-8 rounded-lg bg-accent flex items-center justify-center">
+          <span class="text-white font-display font-bold text-sm">B</span>
+        </div>
+        <span class="font-display font-bold text-base text-white">
+          BARD <span class="text-accent">AI</span>nalytics
+        </span>
+      </a>
+      <div class="mt-2 flex items-center gap-1.5">
+        <div class="w-1.5 h-1.5 rounded-full bg-green-400"></div>
+        <span class="text-xs text-teal-400 font-medium">Beta Workspace</span>
+      </div>
+    </div>
+
+    <!-- Nav -->
+    <nav class="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+      <p class="text-teal-500 text-xs font-semibold uppercase tracking-widest px-3 mb-2">Research</p>
+
+      <button onclick="showPanel('studies')" class="sidebar-link active w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-xl text-gray-200 text-sm font-medium" id="nav-studies">
+        <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+        </svg>
+        Studies
+        <span class="ml-auto bg-accent/20 text-accent text-xs rounded-full px-2 py-0.5 font-semibold">3</span>
+      </button>
+
+      <button onclick="showPanel('data')" class="sidebar-link w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-xl text-gray-400 text-sm font-medium" id="nav-data">
+        <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+        </svg>
+        Data Upload
+      </button>
+
+      <button onclick="showPanel('results')" class="sidebar-link w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-xl text-gray-400 text-sm font-medium" id="nav-results">
+        <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+        </svg>
+        Results
+      </button>
+
+      <p class="text-teal-500 text-xs font-semibold uppercase tracking-widest px-3 mt-4 mb-2">Workspace</p>
+
+      <button onclick="showPanel('team')" class="sidebar-link w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-xl text-gray-400 text-sm font-medium" id="nav-team">
+        <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+        </svg>
+        Team
+      </button>
+
+      <a href="#" class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-gray-400 text-sm font-medium">
+        <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+        </svg>
+        Settings
+      </a>
+    </nav>
+
+    <!-- User footer -->
+    <div class="p-4 border-t border-teal-800">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-full bg-accent/30 flex items-center justify-center flex-shrink-0">
+          <span class="text-accent font-bold text-sm">B</span>
+        </div>
+        <div class="flex-1 min-w-0">
+          <p class="text-white text-xs font-semibold truncate">Beta User</p>
+          <p class="text-teal-400 text-xs truncate">beta@bardanalytics.com</p>
+        </div>
+        <!-- SECURITY: Logout clears all auth tokens/cookies server-side + client-side -->
+        <button onclick="handleLogout()" title="Sign out"
+          class="text-teal-500 hover:text-white transition-colors flex-shrink-0">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ════════════════════════════════
+       MAIN CONTENT
+  ════════════════════════════════ -->
+  <div class="flex-1 flex flex-col overflow-hidden">
+
+    <!-- Top Bar -->
+    <header class="bg-white border-b border-gray-100 px-8 py-4 flex items-center justify-between flex-shrink-0">
+      <div id="pageTitle" class="font-display font-bold text-xl text-teal-800">My Studies</div>
+      <div class="flex items-center gap-4">
+        <!-- Search -->
+        <div class="relative">
+          <svg class="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+          </svg>
+          <input type="search" placeholder="Search studies..." class="pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 w-52 transition" />
+        </div>
+        <!-- Notifications -->
+        <button class="relative p-2 text-gray-400 hover:text-teal-600 transition-colors rounded-lg hover:bg-teal-50">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+          </svg>
+          <div class="absolute top-1.5 right-1.5 w-2 h-2 bg-accent rounded-full"></div>
+        </button>
+        <!-- Help -->
+        <button class="p-2 text-gray-400 hover:text-teal-600 transition-colors rounded-lg hover:bg-teal-50">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Scrollable content area -->
+    <main class="flex-1 overflow-y-auto p-8">
+
+      <!-- ──────────────────────────────
+           PANEL: STUDIES
+      ────────────────────────────── -->
+      <div id="panel-studies" class="panel">
+        <!-- Stats row -->
+        <div class="grid grid-cols-4 gap-4 mb-8">
+          <div class="bg-white rounded-xl p-5 border border-gray-100 shadow-sm">
+            <p class="text-gray-500 text-xs font-medium uppercase tracking-widest mb-1">Total Studies</p>
+            <p class="font-display text-3xl font-bold text-teal-800">3</p>
+            <p class="text-xs text-gray-400 mt-1">2 active · 1 draft</p>
+          </div>
+          <div class="bg-white rounded-xl p-5 border border-gray-100 shadow-sm">
+            <p class="text-gray-500 text-xs font-medium uppercase tracking-widest mb-1">Models Run</p>
+            <p class="font-display text-3xl font-bold text-teal-800">47</p>
+            <p class="text-xs text-gray-400 mt-1">This month</p>
+          </div>
+          <div class="bg-white rounded-xl p-5 border border-gray-100 shadow-sm">
+            <p class="text-gray-500 text-xs font-medium uppercase tracking-widest mb-1">Latest ICER</p>
+            <p class="font-display text-3xl font-bold text-accent">$42K</p>
+            <p class="text-xs text-gray-400 mt-1">per QALY gained</p>
+          </div>
+          <div class="bg-white rounded-xl p-5 border border-gray-100 shadow-sm">
+            <p class="text-gray-500 text-xs font-medium uppercase tracking-widest mb-1">Collaborators</p>
+            <p class="font-display text-3xl font-bold text-teal-800">4</p>
+            <p class="text-xs text-gray-400 mt-1">Across all studies</p>
+          </div>
+        </div>
+
+        <!-- Studies table -->
+        <div class="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+            <h2 class="font-display font-bold text-teal-800 text-lg">My Studies</h2>
+            <button onclick="openNewStudyModal()" class="bg-teal-600 hover:bg-teal-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors flex items-center gap-2 shadow-sm">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+              </svg>
+              New Study
+            </button>
+          </div>
+
+          <table class="w-full">
+            <thead class="bg-gray-50 border-b border-gray-100">
+              <tr>
+                <th class="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-6 py-3">Study Name</th>
+                <th class="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-4 py-3">Type</th>
+                <th class="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-4 py-3">Status</th>
+                <th class="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-4 py-3">Last Updated</th>
+                <th class="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-4 py-3">Collaborators</th>
+                <th class="px-4 py-3"></th>
+              </tr>
+            </thead>
+            <tbody id="studiesTableBody" class="divide-y divide-gray-50">
+              <!-- Populated by JS -->
+            </tbody>
+          </table>
+
+          <div class="px-6 py-4 border-t border-gray-50 flex items-center justify-between text-sm text-gray-400">
+            <span>Showing 3 of 3 studies</span>
+            <div class="flex gap-2">
+              <button class="px-3 py-1.5 border border-gray-200 rounded-lg text-xs hover:bg-gray-50 transition-colors">Previous</button>
+              <button class="px-3 py-1.5 border border-gray-200 rounded-lg text-xs hover:bg-gray-50 transition-colors">Next</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ──────────────────────────────
+           PANEL: DATA UPLOAD
+      ────────────────────────────── -->
+      <div id="panel-data" class="panel hidden">
+        <div class="grid lg:grid-cols-3 gap-6">
+          <!-- Upload area -->
+          <div class="lg:col-span-2">
+            <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-6 mb-6">
+              <h2 class="font-display font-bold text-teal-800 text-lg mb-1">Upload Dataset</h2>
+              <p class="text-gray-400 text-sm mb-5">
+                Accepted formats: CSV, TSV, XLSX, SAS7BDAT, Stata DTA.
+                <!--
+                  SECURITY NOTES:
+                  • Validate file type SERVER-SIDE by inspecting magic bytes, not just extension
+                  • Enforce max file size at server (e.g. 50 MB) to prevent DoS
+                  • Scan uploaded files with antivirus (ClamAV or cloud service)
+                  • Store uploads in a private S3 bucket — never publicly accessible
+                  • Generate presigned S3 URLs with short expiry for download
+                  • Strip metadata from uploaded files before processing
+                  • Never execute uploaded files — treat all content as untrusted data
+                -->
+              </p>
+
+              <!-- Drag & Drop Zone -->
+              <div id="dropZone"
+                class="border-2 border-dashed border-gray-200 rounded-xl p-10 text-center cursor-pointer hover:border-teal-400 transition-colors"
+                ondragover="handleDragOver(event)"
+                ondragleave="handleDragLeave(event)"
+                ondrop="handleDrop(event)"
+                onclick="document.getElementById('fileInput').click()">
+                <div class="w-14 h-14 bg-teal-50 rounded-xl flex items-center justify-center mx-auto mb-4">
+                  <svg class="w-7 h-7 text-teal-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                  </svg>
+                </div>
+                <p class="text-teal-700 font-semibold text-sm mb-1">Drop files here or click to browse</p>
+                <p class="text-gray-400 text-xs">Maximum file size: 50 MB</p>
+                <input type="file" id="fileInput" accept=".csv,.tsv,.xlsx,.sas7bdat,.dta" onchange="handleFileSelect(event)" />
+              </div>
+
+              <!-- Upload progress (hidden by default) -->
+              <div id="uploadProgress" class="hidden mt-4">
+                <div class="flex items-center justify-between text-sm mb-2">
+                  <span id="uploadFilename" class="text-teal-700 font-medium truncate"></span>
+                  <span id="uploadPercent" class="text-gray-400">0%</span>
+                </div>
+                <div class="w-full bg-gray-100 rounded-full h-2">
+                  <div id="progressBar" class="bg-accent rounded-full h-2 transition-all" style="width:0%"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Data preview table -->
+            <div id="dataPreviewSection" class="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden hidden">
+              <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+                <div>
+                  <h3 class="font-display font-bold text-teal-800">Data Preview</h3>
+                  <p id="dataStats" class="text-gray-400 text-xs mt-0.5"></p>
+                </div>
+                <div class="flex gap-2">
+                  <button class="text-xs border border-gray-200 px-3 py-1.5 rounded-lg hover:bg-gray-50 transition-colors text-gray-600">Validate</button>
+                  <button class="text-xs bg-teal-600 text-white px-3 py-1.5 rounded-lg hover:bg-teal-700 transition-colors">Link to Study</button>
+                </div>
+              </div>
+              <div class="overflow-x-auto">
+                <table class="w-full text-xs">
+                  <thead id="previewHead" class="bg-gray-50 border-b border-gray-100"></thead>
+                  <tbody id="previewBody" class="divide-y divide-gray-50"></tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Demo sample data preview -->
+            <div id="sampleDataPreview" class="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+              <div class="px-6 py-4 border-b border-gray-100">
+                <h3 class="font-display font-bold text-teal-800">Sample Dataset — CEA_Trial_Data.csv</h3>
+                <p class="text-gray-400 text-xs mt-0.5">320 rows · 8 columns · Uploaded 2 days ago</p>
+              </div>
+              <div class="overflow-x-auto">
+                <table class="w-full text-xs">
+                  <thead class="bg-gray-50 border-b border-gray-100">
+                    <tr>
+                      <th class="text-left px-4 py-2.5 text-gray-500 font-semibold">patient_id</th>
+                      <th class="text-left px-4 py-2.5 text-gray-500 font-semibold">arm</th>
+                      <th class="text-left px-4 py-2.5 text-gray-500 font-semibold">qaly</th>
+                      <th class="text-left px-4 py-2.5 text-gray-500 font-semibold">total_cost</th>
+                      <th class="text-left px-4 py-2.5 text-gray-500 font-semibold">eq5d_baseline</th>
+                      <th class="text-left px-4 py-2.5 text-gray-500 font-semibold">eq5d_12m</th>
+                      <th class="text-left px-4 py-2.5 text-gray-500 font-semibold">adverse_event</th>
+                      <th class="text-left px-4 py-2.5 text-gray-500 font-semibold">dropout</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-gray-50">
+                    <tr class="table-row"><td class="px-4 py-2.5 text-gray-600">PT-001</td><td class="px-4 py-2.5"><span class="bg-teal-100 text-teal-700 px-2 py-0.5 rounded font-medium">Treatment</span></td><td class="px-4 py-2.5 text-gray-700">0.82</td><td class="px-4 py-2.5 text-gray-700">$24,500</td><td class="px-4 py-2.5 text-gray-700">0.61</td><td class="px-4 py-2.5 text-gray-700">0.79</td><td class="px-4 py-2.5 text-gray-500">No</td><td class="px-4 py-2.5 text-gray-500">No</td></tr>
+                    <tr class="table-row"><td class="px-4 py-2.5 text-gray-600">PT-002</td><td class="px-4 py-2.5"><span class="bg-gray-100 text-gray-600 px-2 py-0.5 rounded font-medium">Control</span></td><td class="px-4 py-2.5 text-gray-700">0.64</td><td class="px-4 py-2.5 text-gray-700">$18,200</td><td class="px-4 py-2.5 text-gray-700">0.58</td><td class="px-4 py-2.5 text-gray-700">0.62</td><td class="px-4 py-2.5 text-gray-500">No</td><td class="px-4 py-2.5 text-gray-500">No</td></tr>
+                    <tr class="table-row"><td class="px-4 py-2.5 text-gray-600">PT-003</td><td class="px-4 py-2.5"><span class="bg-teal-100 text-teal-700 px-2 py-0.5 rounded font-medium">Treatment</span></td><td class="px-4 py-2.5 text-gray-700">0.77</td><td class="px-4 py-2.5 text-gray-700">$26,100</td><td class="px-4 py-2.5 text-gray-700">0.55</td><td class="px-4 py-2.5 text-gray-700">0.74</td><td class="px-4 py-2.5"><span class="text-orange-500 font-medium">Yes</span></td><td class="px-4 py-2.5 text-gray-500">No</td></tr>
+                    <tr class="table-row"><td class="px-4 py-2.5 text-gray-600">PT-004</td><td class="px-4 py-2.5"><span class="bg-gray-100 text-gray-600 px-2 py-0.5 rounded font-medium">Control</span></td><td class="px-4 py-2.5 text-gray-700">0.59</td><td class="px-4 py-2.5 text-gray-700">$17,800</td><td class="px-4 py-2.5 text-gray-700">0.60</td><td class="px-4 py-2.5 text-gray-700">0.58</td><td class="px-4 py-2.5 text-gray-500">No</td><td class="px-4 py-2.5"><span class="text-red-500 font-medium">Yes</span></td></tr>
+                    <tr class="table-row"><td class="px-4 py-2.5 text-gray-600">PT-005</td><td class="px-4 py-2.5"><span class="bg-teal-100 text-teal-700 px-2 py-0.5 rounded font-medium">Treatment</span></td><td class="px-4 py-2.5 text-gray-700">0.88</td><td class="px-4 py-2.5 text-gray-700">$23,900</td><td class="px-4 py-2.5 text-gray-700">0.64</td><td class="px-4 py-2.5 text-gray-700">0.85</td><td class="px-4 py-2.5 text-gray-500">No</td><td class="px-4 py-2.5 text-gray-500">No</td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="px-6 py-3 bg-gray-50 border-t border-gray-100 text-xs text-gray-400">
+                Showing 5 of 320 rows · <span class="text-teal-600 font-medium cursor-pointer hover:underline">View all data →</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right: dataset library -->
+          <div class="space-y-4">
+            <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+              <h3 class="font-display font-bold text-teal-800 mb-4">Uploaded Datasets</h3>
+              <div class="space-y-3">
+                <div class="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+                  <div class="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <p class="text-sm font-medium text-gray-800 truncate">CEA_Trial_Data.csv</p>
+                    <p class="text-xs text-gray-400">320 rows · 2 days ago</p>
+                  </div>
+                </div>
+                <div class="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+                  <div class="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <p class="text-sm font-medium text-gray-800 truncate">BIM_Epidemiology.xlsx</p>
+                    <p class="text-xs text-gray-400">1,204 rows · 5 days ago</p>
+                  </div>
+                </div>
+                <div class="flex items-start gap-3 p-3 bg-yellow-50 rounded-lg border border-yellow-100">
+                  <div class="w-8 h-8 bg-yellow-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <svg class="w-4 h-4 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <p class="text-sm font-medium text-gray-800 truncate">PRO_Survey_Raw.csv</p>
+                    <p class="text-xs text-yellow-600">3 validation warnings</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Data validation summary -->
+            <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+              <h3 class="font-display font-bold text-teal-800 mb-3">Validation Summary</h3>
+              <div class="space-y-2 text-sm">
+                <div class="flex items-center justify-between">
+                  <span class="text-gray-500">Missing values</span>
+                  <span class="text-green-600 font-medium">0.4%</span>
+                </div>
+                <div class="flex items-center justify-between">
+                  <span class="text-gray-500">QALY range check</span>
+                  <span class="text-green-600 font-medium">✓ Pass</span>
+                </div>
+                <div class="flex items-center justify-between">
+                  <span class="text-gray-500">Cost outliers (&gt;3 SD)</span>
+                  <span class="text-orange-500 font-medium">2 flagged</span>
+                </div>
+                <div class="flex items-center justify-between">
+                  <span class="text-gray-500">Duplicate IDs</span>
+                  <span class="text-green-600 font-medium">✓ None</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ──────────────────────────────
+           PANEL: RESULTS
+      ────────────────────────────── -->
+      <div id="panel-results" class="panel hidden">
+        <div class="grid lg:grid-cols-3 gap-6">
+
+          <!-- Key metrics -->
+          <div class="lg:col-span-3 grid grid-cols-4 gap-4">
+            <div class="bg-teal-800 rounded-xl p-5 text-white">
+              <p class="text-teal-300 text-xs font-medium uppercase tracking-widest mb-1">ICER</p>
+              <p class="font-display text-3xl font-bold text-accent">$42,180</p>
+              <p class="text-teal-400 text-xs mt-1">per QALY gained</p>
+            </div>
+            <div class="bg-white rounded-xl p-5 border border-gray-100 shadow-sm">
+              <p class="text-gray-500 text-xs font-medium uppercase tracking-widest mb-1">NMB (WTP $50k)</p>
+              <p class="font-display text-3xl font-bold text-green-600">+$7,820</p>
+              <p class="text-gray-400 text-xs mt-1">Net monetary benefit</p>
+            </div>
+            <div class="bg-white rounded-xl p-5 border border-gray-100 shadow-sm">
+              <p class="text-gray-500 text-xs font-medium uppercase tracking-widest mb-1">QALY gain</p>
+              <p class="font-display text-3xl font-bold text-teal-800">0.19</p>
+              <p class="text-gray-400 text-xs mt-1">vs. comparator</p>
+            </div>
+            <div class="bg-white rounded-xl p-5 border border-gray-100 shadow-sm">
+              <p class="text-gray-500 text-xs font-medium uppercase tracking-widest mb-1">P(CE) at WTP</p>
+              <p class="font-display text-3xl font-bold text-teal-800">74%</p>
+              <p class="text-gray-400 text-xs mt-1">Cost-effective probability</p>
+            </div>
+          </div>
+
+          <!-- CEAC Chart -->
+          <div class="lg:col-span-2 bg-white rounded-xl border border-gray-100 shadow-sm p-6">
+            <h3 class="font-display font-bold text-teal-800 mb-1">Cost-Effectiveness Acceptability Curve</h3>
+            <p class="text-gray-400 text-xs mb-4">PSA-based CEAC showing probability treatment is cost-effective at varying WTP thresholds</p>
+            <div style="height: 240px;">
+              <canvas id="ceacChart"></canvas>
+            </div>
+          </div>
+
+          <!-- DSA Tornado -->
+          <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
+            <h3 class="font-display font-bold text-teal-800 mb-1">DSA — Tornado Diagram</h3>
+            <p class="text-gray-400 text-xs mb-4">Deterministic sensitivity analysis (top 6 drivers)</p>
+            <div style="height: 240px;">
+              <canvas id="tornadoChart"></canvas>
+            </div>
+          </div>
+
+          <!-- Cost breakdown table -->
+          <div class="lg:col-span-3 bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+              <h3 class="font-display font-bold text-teal-800">Model Results Summary</h3>
+              <div class="flex gap-2">
+                <button class="text-xs border border-gray-200 px-3 py-1.5 rounded-lg hover:bg-gray-50 text-gray-600 transition-colors">Export CSV</button>
+                <button class="text-xs border border-gray-200 px-3 py-1.5 rounded-lg hover:bg-gray-50 text-gray-600 transition-colors">Export CHEERS Report</button>
+                <button class="text-xs bg-teal-600 text-white px-3 py-1.5 rounded-lg hover:bg-teal-700 transition-colors">Download Full Report</button>
+              </div>
+            </div>
+            <table class="w-full text-sm">
+              <thead class="bg-gray-50 border-b border-gray-100">
+                <tr>
+                  <th class="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Parameter</th>
+                  <th class="text-right px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Treatment</th>
+                  <th class="text-right px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Comparator</th>
+                  <th class="text-right px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Incremental</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-50">
+                <tr class="table-row"><td class="px-6 py-3 font-medium text-gray-800">Total QALYs</td><td class="px-6 py-3 text-right text-gray-700">7.21</td><td class="px-6 py-3 text-right text-gray-700">7.02</td><td class="px-6 py-3 text-right text-teal-700 font-semibold">+0.19</td></tr>
+                <tr class="table-row"><td class="px-6 py-3 font-medium text-gray-800">Total Costs</td><td class="px-6 py-3 text-right text-gray-700">$182,400</td><td class="px-6 py-3 text-right text-gray-700">$174,384</td><td class="px-6 py-3 text-right text-gray-700">+$8,016</td></tr>
+                <tr class="table-row"><td class="px-6 py-3 font-medium text-gray-800">Drug Costs</td><td class="px-6 py-3 text-right text-gray-700">$94,200</td><td class="px-6 py-3 text-right text-gray-700">$68,400</td><td class="px-6 py-3 text-right text-gray-700">+$25,800</td></tr>
+                <tr class="table-row"><td class="px-6 py-3 font-medium text-gray-800">Hospital Costs</td><td class="px-6 py-3 text-right text-gray-700">$62,100</td><td class="px-6 py-3 text-right text-gray-700">$78,900</td><td class="px-6 py-3 text-right text-green-600 font-semibold">−$16,800</td></tr>
+                <tr class="table-row bg-teal-50"><td class="px-6 py-3 font-bold text-teal-800">ICER</td><td class="px-6 py-3 text-right" colspan="2"></td><td class="px-6 py-3 text-right font-bold text-accent">$42,180/QALY</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ──────────────────────────────
+           PANEL: TEAM
+      ────────────────────────────── -->
+      <div id="panel-team" class="panel hidden">
+        <div class="grid lg:grid-cols-3 gap-6">
+
+          <div class="lg:col-span-2">
+            <div class="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+              <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+                <h2 class="font-display font-bold text-teal-800 text-lg">Team Members</h2>
+                <button onclick="document.getElementById('inviteModal').classList.remove('hidden'); document.getElementById('inviteModal').classList.add('flex');"
+                  class="bg-teal-600 hover:bg-teal-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors flex items-center gap-2 shadow-sm">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                  Invite Collaborator
+                </button>
+              </div>
+              <div class="divide-y divide-gray-50">
+                <!-- Member rows populated by JS -->
+              </div>
+              <table class="w-full">
+                <thead class="bg-gray-50 border-b border-gray-100">
+                  <tr>
+                    <th class="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Member</th>
+                    <th class="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Role</th>
+                    <th class="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Studies Access</th>
+                    <th class="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Last Active</th>
+                    <th class="px-4 py-3"></th>
+                  </tr>
+                </thead>
+                <tbody id="teamTableBody" class="divide-y divide-gray-50">
+                  <!-- Populated by JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- RBAC explanation + audit log -->
+          <div class="space-y-4">
+            <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+              <h3 class="font-display font-bold text-teal-800 mb-3">Access Roles</h3>
+              <!--
+                SECURITY: Role-Based Access Control (RBAC) is implemented server-side.
+                Never rely on client-side role checks alone — always validate on the server.
+                Use principle of least privilege: give each role only what it needs.
+              -->
+              <div class="space-y-3">
+                <div class="p-3 bg-red-50 rounded-lg border border-red-100">
+                  <p class="text-xs font-bold text-red-700 mb-0.5">Admin</p>
+                  <p class="text-xs text-red-600">Full workspace control. Manage billing, team, all studies. Assign roles.</p>
+                </div>
+                <div class="p-3 bg-teal-50 rounded-lg border border-teal-100">
+                  <p class="text-xs font-bold text-teal-700 mb-0.5">Analyst</p>
+                  <p class="text-xs text-teal-600">Run models, upload data, view and export results on assigned studies.</p>
+                </div>
+                <div class="p-3 bg-gray-50 rounded-lg border border-gray-100">
+                  <p class="text-xs font-bold text-gray-700 mb-0.5">Viewer</p>
+                  <p class="text-xs text-gray-600">Read-only access. View results and reports. Cannot run models or upload data.</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Audit log snippet -->
+            <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+              <h3 class="font-display font-bold text-teal-800 mb-3">Recent Audit Log</h3>
+              <!--
+                SECURITY: All user actions are logged server-side with:
+                - Timestamp (UTC)
+                - User ID and email
+                - IP address and user agent
+                - Action type and resource affected
+                Logs are immutable and stored in append-only storage.
+              -->
+              <div class="space-y-2.5">
+                <div class="text-xs">
+                  <p class="text-gray-400">2 min ago</p>
+                  <p class="text-gray-700"><span class="font-medium">You</span> ran PSA on <span class="text-teal-600">CEA Study – Drug X</span></p>
+                </div>
+                <div class="text-xs">
+                  <p class="text-gray-400">1 hour ago</p>
+                  <p class="text-gray-700"><span class="font-medium">Dr. Kim</span> viewed results for <span class="text-teal-600">CEA Study – Drug X</span></p>
+                </div>
+                <div class="text-xs">
+                  <p class="text-gray-400">3 hours ago</p>
+                  <p class="text-gray-700"><span class="font-medium">You</span> uploaded <span class="text-teal-600">CEA_Trial_Data.csv</span></p>
+                </div>
+                <div class="text-xs">
+                  <p class="text-gray-400">Yesterday</p>
+                  <p class="text-gray-700"><span class="font-medium">Prof. Nguyen</span> invited to workspace</p>
+                </div>
+              </div>
+              <a href="#" class="text-teal-600 text-xs font-medium hover:underline mt-3 block">View full audit log →</a>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- ════════════════════════════════
+       NEW STUDY MODAL
+  ════════════════════════════════ -->
+  <div id="newStudyModal" class="fixed inset-0 z-50 hidden items-center justify-center modal-backdrop">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 p-8 relative">
+      <button onclick="document.getElementById('newStudyModal').classList.add('hidden'); document.getElementById('newStudyModal').classList.remove('flex');"
+        class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+      <h2 class="font-display text-2xl font-bold text-teal-800 mb-1">Create New Study</h2>
+      <p class="text-gray-400 text-sm mb-6">Configure your HEOR study parameters</p>
+      <form onsubmit="createStudy(event)" class="space-y-4">
+        <div>
+          <label class="text-sm font-medium text-gray-700 block mb-1.5">Study name</label>
+          <input type="text" id="newStudyName" required
+            class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 transition"
+            placeholder="e.g. CEA for Drug Y in Type 2 Diabetes" />
+        </div>
+        <div>
+          <label class="text-sm font-medium text-gray-700 block mb-1.5">Study type</label>
+          <select id="newStudyType" class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 transition text-gray-700">
+            <option value="cea">Cost-Effectiveness Analysis (CEA)</option>
+            <option value="bim">Budget Impact Model (BIM)</option>
+            <option value="nma">Network Meta-Analysis (NMA)</option>
+            <option value="pro">PRO / HRQoL Analysis</option>
+            <option value="rwe">Real-World Evidence Study</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-sm font-medium text-gray-700 block mb-1.5">Indication / Therapeutic area</label>
+          <input type="text"
+            class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 transition"
+            placeholder="e.g. Oncology, Cardiovascular, Rare Disease" />
+        </div>
+        <div>
+          <label class="text-sm font-medium text-gray-700 block mb-1.5">Target HTA market</label>
+          <select class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 transition text-gray-700">
+            <option>NICE (UK)</option>
+            <option>IQWIG / G-BA (Germany)</option>
+            <option>HAS (France)</option>
+            <option>CADTH (Canada)</option>
+            <option>US Payer</option>
+            <option>Global / Multiple</option>
+          </select>
+        </div>
+        <div class="flex gap-3 pt-2">
+          <button type="button" onclick="document.getElementById('newStudyModal').classList.add('hidden'); document.getElementById('newStudyModal').classList.remove('flex');"
+            class="flex-1 border border-gray-200 text-gray-600 font-medium py-3 rounded-xl hover:bg-gray-50 transition-colors text-sm">
+            Cancel
+          </button>
+          <button type="submit" class="flex-1 bg-teal-600 hover:bg-teal-700 text-white font-semibold py-3 rounded-xl transition-colors text-sm shadow-lg">
+            Create Study
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════
+       INVITE COLLABORATOR MODAL
+  ════════════════════════════════ -->
+  <div id="inviteModal" class="fixed inset-0 z-50 hidden items-center justify-center modal-backdrop">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-8 relative">
+      <button onclick="document.getElementById('inviteModal').classList.add('hidden'); document.getElementById('inviteModal').classList.remove('flex');"
+        class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+      <h2 class="font-display text-2xl font-bold text-teal-800 mb-1">Invite Collaborator</h2>
+      <p class="text-gray-400 text-sm mb-6">They'll receive a secure invite link via email.</p>
+      <!--
+        SECURITY NOTES for invitations:
+        • Generate cryptographically secure, time-limited invite tokens (expire in 48h)
+        • Single-use tokens — invalidate after first use
+        • Send via email (never via URL params visible in logs)
+        • Enforce email domain restrictions for sensitive workspaces
+        • Log all invitations with inviter ID and timestamp
+      -->
+      <form onsubmit="sendInvite(event)" class="space-y-4">
+        <div>
+          <label class="text-sm font-medium text-gray-700 block mb-1.5">Email address</label>
+          <input type="email" required
+            class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 transition"
+            placeholder="colleague@pharma.com" />
+        </div>
+        <div>
+          <label class="text-sm font-medium text-gray-700 block mb-1.5">Assign role</label>
+          <select class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 transition text-gray-700">
+            <option value="analyst">Analyst — can run models and upload data</option>
+            <option value="viewer">Viewer — read-only access</option>
+            <option value="admin">Admin — full workspace control</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-sm font-medium text-gray-700 block mb-1.5">Studies access (optional)</label>
+          <div class="space-y-2">
+            <label class="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+              <input type="checkbox" class="rounded border-gray-300 text-teal-600" checked /> CEA Study – Drug X
+            </label>
+            <label class="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+              <input type="checkbox" class="rounded border-gray-300 text-teal-600" /> Budget Impact Model v2
+            </label>
+            <label class="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+              <input type="checkbox" class="rounded border-gray-300 text-teal-600" /> PRO Mapping Study
+            </label>
+          </div>
+        </div>
+        <div class="flex gap-3 pt-2">
+          <button type="button" onclick="document.getElementById('inviteModal').classList.add('hidden'); document.getElementById('inviteModal').classList.remove('flex');"
+            class="flex-1 border border-gray-200 text-gray-600 font-medium py-3 rounded-xl hover:bg-gray-50 transition-colors text-sm">
+            Cancel
+          </button>
+          <button type="submit" id="inviteBtn" class="flex-1 bg-teal-600 hover:bg-teal-700 text-white font-semibold py-3 rounded-xl transition-colors text-sm shadow-lg">
+            Send Invite
+          </button>
+        </div>
+        <p id="inviteSuccess" class="hidden text-accent text-sm font-medium text-center">✓ Invite sent successfully!</p>
+      </form>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════
+       JAVASCRIPT
+  ════════════════════════════════ -->
+  <script>
+    // ── Data store (in-memory demo — replace with API calls in production) ──
+    /*
+      SECURITY: In production, NEVER store sensitive study data in localStorage.
+      All data should be fetched from the server via authenticated API requests.
+      Use short-lived JWTs stored in HttpOnly cookies.
+      Every API call must:
+        - Include CSRF token in headers
+        - Be validated server-side for authorization (not just authentication)
+        - Return only data the authenticated user is permitted to access
+    */
+
+    const studies = [
+      { id: 1, name: 'CEA Study – Drug X (Oncology)', type: 'CEA', status: 'active', updated: '2h ago', collaborators: 2 },
+      { id: 2, name: 'Budget Impact Model v2', type: 'BIM', status: 'active', updated: '1 day ago', collaborators: 1 },
+      { id: 3, name: 'PRO Mapping Study', type: 'PRO', status: 'draft', updated: '3 days ago', collaborators: 0 },
+    ];
+
+    const teamMembers = [
+      { name: 'You (Admin)', email: 'beta@bardanalytics.com', role: 'admin', studies: 'All', lastActive: 'Now' },
+      { name: 'Dr. Ji-Yeon Kim', email: 'kim@pharma.com', role: 'analyst', studies: 'CEA Study', lastActive: '1h ago' },
+      { name: 'Prof. Anh Nguyen', email: 'nguyen@uni.edu', role: 'viewer', studies: 'BIM, CEA', lastActive: '2 days ago' },
+      { name: 'Marcus Webb', email: 'm.webb@cro.com', role: 'analyst', studies: 'PRO Mapping', lastActive: '5 days ago' },
+    ];
+
+    const statusStyles = {
+      active: 'bg-green-100 text-green-700',
+      draft: 'bg-gray-100 text-gray-600',
+      review: 'bg-yellow-100 text-yellow-700',
+    };
+
+    const roleStyles = {
+      admin: 'bg-red-100 text-red-700',
+      analyst: 'bg-teal-100 text-teal-700',
+      viewer: 'bg-gray-100 text-gray-600',
+    };
+
+    // ── Render studies table ─────────────────────────────
+    function renderStudies() {
+      const tbody = document.getElementById('studiesTableBody');
+      tbody.innerHTML = studies.map(s => `
+        <tr class="table-row cursor-pointer" onclick="alert('Opening study: ${s.name}\\n\\nIn production this would navigate to the study workspace.')">
+          <td class="px-6 py-4">
+            <div class="font-semibold text-gray-800 text-sm">${s.name}</div>
+          </td>
+          <td class="px-4 py-4">
+            <span class="bg-teal-50 text-teal-700 text-xs font-semibold px-2.5 py-1 rounded-full">${s.type}</span>
+          </td>
+          <td class="px-4 py-4">
+            <span class="status-pill ${statusStyles[s.status] || 'bg-gray-100 text-gray-600'}">${s.status.charAt(0).toUpperCase() + s.status.slice(1)}</span>
+          </td>
+          <td class="px-4 py-4 text-sm text-gray-500">${s.updated}</td>
+          <td class="px-4 py-4 text-sm text-gray-500">${s.collaborators} ${s.collaborators === 1 ? 'person' : 'people'}</td>
+          <td class="px-4 py-4">
+            <button class="text-xs text-teal-600 hover:underline font-medium" onclick="event.stopPropagation()">Open →</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    // ── Render team table ────────────────────────────────
+    function renderTeam() {
+      const tbody = document.getElementById('teamTableBody');
+      tbody.innerHTML = teamMembers.map(m => `
+        <tr class="table-row">
+          <td class="px-6 py-4">
+            <div class="flex items-center gap-3">
+              <div class="w-8 h-8 rounded-full bg-teal-100 flex items-center justify-center flex-shrink-0">
+                <span class="text-teal-700 font-bold text-xs">${m.name.split(' ').map(n => n[0]).join('').slice(0,2)}</span>
+              </div>
+              <div>
+                <p class="font-semibold text-gray-800 text-sm">${m.name}</p>
+                <p class="text-gray-400 text-xs">${m.email}</p>
+              </div>
+            </div>
+          </td>
+          <td class="px-4 py-4">
+            <span class="status-pill ${roleStyles[m.role]}">${m.role.charAt(0).toUpperCase() + m.role.slice(1)}</span>
+          </td>
+          <td class="px-4 py-4 text-sm text-gray-500">${m.studies}</td>
+          <td class="px-4 py-4 text-sm text-gray-500">${m.lastActive}</td>
+          <td class="px-4 py-4">
+            ${m.role !== 'admin' ? `<button class="text-xs text-gray-400 hover:text-red-500 transition-colors">Remove</button>` : ''}
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    // ── Panel navigation ─────────────────────────────────
+    const panels = ['studies', 'data', 'results', 'team'];
+    const titles = {
+      studies: 'My Studies',
+      data: 'Data Upload',
+      results: 'Results Viewer',
+      team: 'Team & Collaborators',
+    };
+
+    function showPanel(name) {
+      panels.forEach(p => {
+        document.getElementById(`panel-${p}`).classList.add('hidden');
+        const nav = document.getElementById(`nav-${p}`);
+        nav.classList.remove('active', 'text-white');
+        nav.classList.add('text-gray-400');
+      });
+      document.getElementById(`panel-${name}`).classList.remove('hidden');
+      const activeNav = document.getElementById(`nav-${name}`);
+      activeNav.classList.add('active', 'text-white');
+      activeNav.classList.remove('text-gray-400');
+      document.getElementById('pageTitle').textContent = titles[name];
+
+      if (name === 'results') renderCharts();
+    }
+
+    // ── Study actions ────────────────────────────────────
+    function openNewStudyModal() {
+      document.getElementById('newStudyModal').classList.remove('hidden');
+      document.getElementById('newStudyModal').classList.add('flex');
+    }
+
+    function createStudy(e) {
+      e.preventDefault();
+      const name = document.getElementById('newStudyName').value;
+      const type = document.getElementById('newStudyType').value.toUpperCase();
+      studies.push({ id: studies.length + 1, name, type, status: 'draft', updated: 'just now', collaborators: 0 });
+      renderStudies();
+      document.getElementById('newStudyModal').classList.add('hidden');
+      document.getElementById('newStudyModal').classList.remove('flex');
+      // In production: POST to /api/studies with auth headers and CSRF token
+    }
+
+    // ── File upload ──────────────────────────────────────
+    function handleDragOver(e) {
+      e.preventDefault();
+      document.getElementById('dropZone').classList.add('drag-active');
+    }
+    function handleDragLeave(e) {
+      document.getElementById('dropZone').classList.remove('drag-active');
+    }
+    function handleDrop(e) {
+      e.preventDefault();
+      document.getElementById('dropZone').classList.remove('drag-active');
+      const file = e.dataTransfer.files[0];
+      if (file) simulateUpload(file);
+    }
+    function handleFileSelect(e) {
+      const file = e.target.files[0];
+      if (file) simulateUpload(file);
+    }
+
+    function simulateUpload(file) {
+      // DEMO: In production, use multipart form upload or presigned S3 URL
+      // Always validate file type server-side; never trust client-side validation alone
+      const progress = document.getElementById('uploadProgress');
+      const bar = document.getElementById('progressBar');
+      const pct = document.getElementById('uploadPercent');
+      const fn = document.getElementById('uploadFilename');
+
+      fn.textContent = file.name;
+      progress.classList.remove('hidden');
+      let p = 0;
+      const iv = setInterval(() => {
+        p += 10 + Math.random() * 15;
+        if (p >= 100) { p = 100; clearInterval(iv); }
+        bar.style.width = `${p}%`;
+        pct.textContent = `${Math.round(p)}%`;
+      }, 200);
+    }
+
+    // ── Invite ───────────────────────────────────────────
+    function sendInvite(e) {
+      e.preventDefault();
+      document.getElementById('inviteBtn').textContent = 'Sending...';
+      setTimeout(() => {
+        document.getElementById('inviteSuccess').classList.remove('hidden');
+        document.getElementById('inviteBtn').textContent = 'Send Invite';
+      }, 1000);
+      // In production: POST to /api/invitations — generate time-limited secure token server-side
+    }
+
+    // ── Logout ───────────────────────────────────────────
+    function handleLogout() {
+      // In production: POST to /api/auth/logout to invalidate server-side session
+      // Clear HttpOnly auth cookies via server response
+      // Redirect to login page
+      window.location.href = 'index.html';
+    }
+
+    // ── Charts ───────────────────────────────────────────
+    let chartsRendered = false;
+    function renderCharts() {
+      if (chartsRendered) return;
+      chartsRendered = true;
+
+      // CEAC
+      const ceacCtx = document.getElementById('ceacChart').getContext('2d');
+      new Chart(ceacCtx, {
+        type: 'line',
+        data: {
+          labels: ['$0', '$10k', '$20k', '$30k', '$40k', '$50k', '$60k', '$80k', '$100k'],
+          datasets: [{
+            label: 'P(cost-effective)',
+            data: [0.08, 0.19, 0.35, 0.52, 0.63, 0.74, 0.82, 0.91, 0.95],
+            borderColor: '#00C2A8',
+            backgroundColor: 'rgba(0,194,168,0.1)',
+            fill: true,
+            tension: 0.4,
+            pointBackgroundColor: '#0f7b8e',
+            pointRadius: 4,
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            y: { min: 0, max: 1, ticks: { callback: v => `${Math.round(v*100)}%`, font: { size: 10 } }, grid: { color: '#f3f4f6' } },
+            x: { ticks: { font: { size: 10 } }, grid: { color: '#f3f4f6' } }
+          }
+        }
+      });
+
+      // Tornado
+      const tornadoCtx = document.getElementById('tornadoChart').getContext('2d');
+      new Chart(tornadoCtx, {
+        type: 'bar',
+        data: {
+          labels: ['Drug cost', 'Utility (stable)', 'Transition prob.', 'Discount rate', 'Time horizon', 'AE cost'],
+          datasets: [
+            { label: 'Low', data: [32000, 38000, 40000, 41000, 43000, 41500], backgroundColor: 'rgba(15,123,142,0.7)' },
+            { label: 'High', data: [56000, 48000, 46000, 44000, 41000, 42500], backgroundColor: 'rgba(0,194,168,0.7)' },
+          ]
+        },
+        options: {
+          indexAxis: 'y',
+          responsive: true, maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'bottom', labels: { font: { size: 9 } } },
+            tooltip: { callbacks: { label: ctx => `$${ctx.raw.toLocaleString()}/QALY` } }
+          },
+          scales: {
+            x: { ticks: { callback: v => `$${(v/1000).toFixed(0)}k`, font: { size: 9 } }, grid: { color: '#f3f4f6' } },
+            y: { ticks: { font: { size: 9 } } }
+          }
+        }
+      });
+    }
+
+    // ── Initialize ───────────────────────────────────────
+    renderStudies();
+    renderTeam();
+  </script>
+
+</body>
+</html>
