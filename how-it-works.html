@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!--
+    BARD AInalytics — "How It Works" live examples (standalone prototype).
+    NOTE on CSP: this prototype loads Tailwind (cdn.tailwindcss.com), SheetJS
+    (cdnjs.cloudflare.com) and, on demand, Pyodide (cdn.jsdelivr.net) which needs
+    'wasm-unsafe-eval'. When embedding into the production site, extend the site
+    CSP script-src/connect-src accordingly, or self-host these assets.
+  -->
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://cdn.tailwindcss.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.tailwindcss.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://cdn.jsdelivr.net data: blob:; worker-src 'self' blob:;" />
+  <title>How It Works — Live Examples | BARD AInalytics</title>
+  <meta name="description" content="Interactive examples showing how BARD AInalytics turns a submitted dataset and a described task into a completed statistical analysis." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: { extend: {
+        colors: {
+          teal: { 50:'#f0fdfa',100:'#ccfbf1',200:'#99f6e4',300:'#5eead4',400:'#2dd4bf',500:'#14b8a6',600:'#0f7b8e',700:'#0e6e7f',800:'#0a2a2e',900:'#071e22' },
+          accent: '#00C2A8',
+        },
+        fontFamily: { sans:['Inter','sans-serif'], display:['Space Grotesk','sans-serif'], mono:['JetBrains Mono','ui-monospace','monospace'] },
+      } }
+    }
+  </script>
+  <style>
+    .hero-gradient { background: linear-gradient(135deg, #0a2a2e 0%, #0f7b8e 50%, #00C2A8 100%); }
+    .card-hover { transition: transform .2s ease, box-shadow .2s ease; }
+    .card-hover:hover { transform: translateY(-4px); box-shadow: 0 20px 40px rgba(15,123,142,.15); }
+    .mono { font-family:'JetBrains Mono',ui-monospace,monospace; }
+    .results-scroll { max-height: 60vh; overflow:auto; }
+    @keyframes fadeInUp { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+    .animate-fadeInUp { animation: fadeInUp .5s ease forwards; }
+    .spin { animation: rot 1s linear infinite; } @keyframes rot { to{transform:rotate(360deg)} }
+    table.reg td, table.reg th { padding:.4rem .75rem; }
+  </style>
+</head>
+<body class="font-sans bg-gray-50 text-gray-900 antialiased">
+
+  <!-- NAV -->
+  <nav class="bg-teal-900 sticky top-0 z-40 shadow-lg">
+    <div class="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
+      <a href="index.html" class="flex items-center gap-2 group">
+        <div class="w-9 h-9 rounded-lg bg-accent flex items-center justify-center shadow">
+          <span class="text-white font-display font-bold text-base">B</span>
+        </div>
+        <span class="font-display font-bold text-xl text-white tracking-tight">BARD <span class="text-accent">AI</span>nalytics</span>
+      </a>
+      <div class="hidden md:flex items-center gap-8 text-sm font-medium">
+        <a href="index.html#features" class="text-gray-200 hover:text-white">Features</a>
+        <a href="how-it-works.html" class="text-white border-b-2 border-accent pb-0.5">How It Works</a>
+        <a href="index.html#heor-studies" class="text-gray-200 hover:text-white">HEOR Studies</a>
+        <a href="index.html#beta" class="text-gray-200 hover:text-white">Request Access</a>
+      </div>
+      <a href="index.html" class="text-gray-300 hover:text-white text-sm">&larr; Home</a>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <header class="hero-gradient text-white">
+    <div class="max-w-7xl mx-auto px-6 py-14">
+      <div class="inline-flex items-center gap-2 bg-white/10 border border-white/20 rounded-full px-4 py-1.5 mb-5">
+        <div class="w-2 h-2 rounded-full bg-accent animate-pulse"></div>
+        <span class="text-xs font-medium tracking-wide uppercase">Interactive Prototype</span>
+      </div>
+      <h1 class="font-display text-4xl lg:text-5xl font-bold leading-tight mb-4">How It Works</h1>
+      <p class="text-gray-200 text-lg max-w-2xl leading-relaxed">
+        Submit a dataset, describe what you want to learn, and BARD&nbsp;AI recommends the
+        appropriate analysis and runs it. You can accept the recommendation, force a specific
+        method, or do both and compare. Results appear on-page and as a downloadable file.
+      </p>
+    </div>
+  </header>
+
+  <!-- EXAMPLES INDEX -->
+  <section class="max-w-7xl mx-auto px-6 -mt-8 relative z-10">
+    <div class="grid md:grid-cols-3 gap-5">
+      <button id="ex1Card" class="text-left card-hover bg-white rounded-2xl border-2 border-accent p-6 shadow-sm">
+        <div class="flex items-center justify-between mb-3">
+          <span class="text-xs font-semibold uppercase tracking-widest text-accent">Example 1</span>
+          <span class="text-[11px] font-semibold bg-accent/10 text-teal-700 px-2 py-0.5 rounded-full">Live</span>
+        </div>
+        <h3 class="font-display font-bold text-teal-800 text-lg mb-1">Linear Regression (OLS)</h3>
+        <p class="text-gray-500 text-sm leading-relaxed">Regress <span class="mono">price</span> on <span class="mono">mpg</span>, <span class="mono">headroom</span>, <span class="mono">weight</span> using the <span class="mono">auto.xlsx</span> dataset.</p>
+        <p class="text-teal-600 text-sm font-semibold mt-3">Open example &darr;</p>
+      </button>
+
+      <div class="bg-white rounded-2xl border border-gray-200 p-6 opacity-70">
+        <div class="flex items-center justify-between mb-3">
+          <span class="text-xs font-semibold uppercase tracking-widest text-gray-400">Example 2</span>
+          <span class="text-[11px] font-semibold bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">Planned</span>
+        </div>
+        <h3 class="font-display font-bold text-gray-600 text-lg mb-1">Logistic Regression</h3>
+        <p class="text-gray-400 text-sm leading-relaxed">Binary outcome modeling on claims data, with automatic odds-ratio reporting.</p>
+      </div>
+
+      <div class="bg-white rounded-2xl border border-gray-200 p-6 opacity-70">
+        <div class="flex items-center justify-between mb-3">
+          <span class="text-xs font-semibold uppercase tracking-widest text-gray-400">Example 3</span>
+          <span class="text-[11px] font-semibold bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">Planned</span>
+        </div>
+        <h3 class="font-display font-bold text-gray-600 text-lg mb-1">Survival Analysis (Cox)</h3>
+        <p class="text-gray-400 text-sm leading-relaxed">Time-to-event modeling with Kaplan-Meier curves and proportional-hazards estimation.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- EXAMPLE 1 WORKBENCH -->
+  <main id="workbench" class="max-w-7xl mx-auto px-6 py-12">
+    <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+      <div class="bg-teal-800 text-white px-6 py-4 flex items-center gap-3">
+        <div class="w-8 h-8 rounded-lg bg-accent/20 border border-accent flex items-center justify-center font-display font-bold text-accent">1</div>
+        <div>
+          <h2 class="font-display font-bold text-lg leading-tight">Example 1 &middot; Ordinary Least Squares</h2>
+          <p class="text-teal-200 text-xs">Dataset &rarr; task &rarr; recommendation &rarr; analysis &rarr; results</p>
+        </div>
+      </div>
+
+      <div class="grid lg:grid-cols-2 gap-0">
+        <!-- LEFT: inputs -->
+        <div class="p-6 border-r border-gray-100 space-y-8">
+
+          <!-- STEP 1 DATA -->
+          <div>
+            <h3 class="font-display font-bold text-teal-800 mb-1"><span class="text-accent">Step 1.</span> Submit your dataset</h3>
+            <p class="text-gray-500 text-sm mb-3">Upload an <span class="mono">.xlsx</span>, <span class="mono">.xls</span> or <span class="mono">.csv</span> file. Or load the bundled <span class="mono">auto.xlsx</span> sample.</p>
+            <div class="flex flex-wrap items-center gap-3">
+              <label class="inline-flex items-center gap-2 bg-teal-600 hover:bg-teal-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl cursor-pointer transition-colors shadow">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.9A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+                Upload file
+                <input id="fileInput" type="file" accept=".xlsx,.xls,.csv" class="hidden" />
+              </label>
+              <button id="loadSample" class="inline-flex items-center gap-2 bg-white border border-teal-300 hover:bg-teal-50 text-teal-700 text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors">
+                Load sample auto.xlsx
+              </button>
+              <a id="downloadSample" class="text-teal-600 text-sm font-medium hover:underline cursor-pointer">Download auto.xlsx</a>
+            </div>
+            <div id="dataStatus" class="mt-3 text-sm"></div>
+            <div id="previewWrap" class="mt-3 hidden">
+              <div class="text-xs text-gray-400 mb-1">Preview (first 5 rows)</div>
+              <div class="overflow-auto border border-gray-100 rounded-lg">
+                <table id="previewTable" class="mono text-xs w-full"></table>
+              </div>
+            </div>
+          </div>
+
+          <!-- STEP 2 TASK -->
+          <div>
+            <h3 class="font-display font-bold text-teal-800 mb-1"><span class="text-accent">Step 2.</span> Describe the task</h3>
+            <p class="text-gray-500 text-sm mb-3">Say what you want in plain language. BARD&nbsp;AI parses it into a model specification.</p>
+            <textarea id="taskText" rows="2" class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500" placeholder="e.g. Run an OLS regression of price on mpg, headroom and weight."></textarea>
+
+            <div class="mt-4">
+              <div class="text-sm font-semibold text-gray-700 mb-2">How should BARD AI decide the method?</div>
+              <div class="grid sm:grid-cols-3 gap-2">
+                <label class="flex items-start gap-2 border border-gray-200 rounded-xl px-3 py-2.5 cursor-pointer hover:border-teal-300">
+                  <input type="radio" name="mode" value="suggest" class="mt-0.5 text-teal-600" checked />
+                  <span><span class="block text-sm font-medium text-gray-800">Suggest</span><span class="block text-xs text-gray-400">BARD AI picks the method</span></span>
+                </label>
+                <label class="flex items-start gap-2 border border-gray-200 rounded-xl px-3 py-2.5 cursor-pointer hover:border-teal-300">
+                  <input type="radio" name="mode" value="force" class="mt-0.5 text-teal-600" />
+                  <span><span class="block text-sm font-medium text-gray-800">Force</span><span class="block text-xs text-gray-400">Use my chosen method</span></span>
+                </label>
+                <label class="flex items-start gap-2 border border-gray-200 rounded-xl px-3 py-2.5 cursor-pointer hover:border-teal-300">
+                  <input type="radio" name="mode" value="both" class="mt-0.5 text-teal-600" />
+                  <span><span class="block text-sm font-medium text-gray-800">Both</span><span class="block text-xs text-gray-400">Compare AI vs mine</span></span>
+                </label>
+              </div>
+            </div>
+
+            <div class="grid sm:grid-cols-2 gap-3 mt-4">
+              <div>
+                <label class="text-sm font-medium text-gray-700 block mb-1">Analysis method</label>
+                <select id="analysisType" class="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500">
+                  <option value="ols">Linear regression (OLS)</option>
+                  <option value="logit">Logistic regression</option>
+                  <option value="mlogit">Multinomial logit</option>
+                  <option value="poisson">Poisson regression</option>
+                  <option value="probit">Probit</option>
+                  <option value="quantile">Quantile (median) regression</option>
+                </select>
+              </div>
+              <div>
+                <label class="text-sm font-medium text-gray-700 block mb-1">Compute engine</label>
+                <select id="engine" class="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500">
+                  <option value="js">JavaScript (instant, in-browser)</option>
+                  <option value="pyodide">Python &mdash; statsmodels (Pyodide)</option>
+                  <option value="stata" disabled>Stata (requires backend)</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="grid sm:grid-cols-2 gap-3 mt-4">
+              <div>
+                <label class="text-sm font-medium text-gray-700 block mb-1">Dependent variable (Y)</label>
+                <select id="depVar" class="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"></select>
+              </div>
+              <div>
+                <label class="text-sm font-medium text-gray-700 block mb-1">Independent variables (X) <span class="text-gray-400 font-normal">&mdash; ctrl/cmd-click</span></label>
+                <select id="indepVars" multiple size="5" class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"></select>
+              </div>
+            </div>
+          </div>
+
+          <!-- RECOMMENDATION -->
+          <div id="recoPanel" class="hidden bg-teal-50 border border-teal-100 rounded-xl p-4">
+            <div class="flex items-center gap-2 mb-1">
+              <svg class="w-4 h-4 text-accent" fill="currentColor" viewBox="0 0 20 20"><path d="M11 3a1 1 0 10-2 0v1a1 1 0 102 0V3zM15.657 5.757a1 1 0 00-1.414-1.414l-.707.707a1 1 0 001.414 1.414l.707-.707zM18 10a1 1 0 01-1 1h-1a1 1 0 110-2h1a1 1 0 011 1zM5.05 6.464A1 1 0 106.464 5.05l-.707-.707A1 1 0 004.343 5.757l.707.707zM5 10a1 1 0 01-1 1H3a1 1 0 110-2h1a1 1 0 011 1zM8 16v-1h4v1a2 2 0 11-4 0zM12 14c.015-.34.208-.646.477-.859a4 4 0 10-4.954 0c.27.213.462.519.476.859h4.001z"/></svg>
+              <span class="text-sm font-bold text-teal-800">BARD AI recommendation</span>
+            </div>
+            <div id="recoBody" class="text-sm text-teal-900"></div>
+          </div>
+
+          <button id="runBtn" class="w-full bg-accent hover:bg-teal-400 text-white font-semibold py-3.5 rounded-xl transition-colors shadow-lg disabled:opacity-40 disabled:cursor-not-allowed" disabled>
+            Run analysis
+          </button>
+        </div>
+
+        <!-- RIGHT: results -->
+        <div class="p-6 bg-gray-50">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="font-display font-bold text-teal-800">Results</h3>
+            <div id="resultActions" class="hidden flex-wrap gap-2">
+              <button id="popout" class="text-xs font-semibold border border-teal-300 text-teal-700 px-3 py-1.5 rounded-lg hover:bg-teal-50">Open in window</button>
+              <button id="dlTxt" class="text-xs font-semibold border border-teal-300 text-teal-700 px-3 py-1.5 rounded-lg hover:bg-teal-50">.txt</button>
+              <button id="dlCsv" class="text-xs font-semibold border border-teal-300 text-teal-700 px-3 py-1.5 rounded-lg hover:bg-teal-50">.csv</button>
+              <button id="dlHtml" class="text-xs font-semibold border border-teal-300 text-teal-700 px-3 py-1.5 rounded-lg hover:bg-teal-50">.html</button>
+            </div>
+          </div>
+          <div id="resultsPanel" class="results-scroll">
+            <div id="resultsEmpty" class="text-gray-400 text-sm border border-dashed border-gray-300 rounded-xl p-8 text-center">
+              Load data, set the task, and click <span class="font-semibold">Run analysis</span>. Results and a downloadable file will appear here.
+            </div>
+            <div id="resultsContent" class="hidden"></div>
+          </div>
+          <div id="selftest" class="mt-4 hidden text-xs"></div>
+        </div>
+      </div>
+    </div>
+
+    <p class="text-gray-400 text-xs mt-4 leading-relaxed">
+      Prototype note: the JavaScript engine computes OLS in closed form and is verified on load against a
+      statsmodels reference baseline (see the verification badge after running the sample). The Pyodide engine
+      runs the real <span class="mono">statsmodels.OLS</span> in your browser. Methods other than OLS and the Stata
+      engine are wired to the hybrid backend scaffold and are disabled in this static prototype.
+    </p>
+  </main>
+
+  <footer class="bg-teal-900 text-gray-400 py-8 mt-8">
+    <div class="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between gap-2 text-xs">
+      <span>&copy; 2026 BARD AInalytics. Prototype for demonstration.</span>
+      <span>Engine: in-browser Python / JavaScript &middot; verified against statsmodels</span>
+    </div>
+  </footer>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script>
+  // ===== Embedded assets (injected at build) =====
+  const AUTO_XLSX_B64 = "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";
+  const OLS_REF = {"n": 74, "df_model": 3, "df_resid": 70, "r2": 0.3221029994402034, "adj_r2": 0.2930502708447835, "F": 11.086841581240758, "prob_F": 4.853033092698021e-06, "rmse": 2479.9450661835417, "sse": 430508927.1901664, "ssm": 204556468.9314552, "sst": 635065396.1216216, "params": {"const": 3158.3062356859778, "mpg": -56.19415850957958, "headroom": -675.5962310769212, "weight": 2.061944582679343}, "bse": {"const": 3617.448602812742, "mpg": 85.07653847471693, "headroom": 392.3504383348331, "weight": 0.6586382556578889}, "t": {"const": 0.8730756349185559, "mpg": -0.6605129865066076, "headroom": -1.721920418756778, "weight": 3.13061770245906}, "p": {"const": 0.3856070457605893, "mpg": 0.5110925266168653, "headroom": 0.08950033224095441, "weight": 0.0025448239365994255}, "ci": {"const": [-4056.46750768858, 10373.079979060536], "mpg": [-225.8739641845842, 113.48564716542504], "headroom": [-1458.1145061116044, 106.92204395776218], "weight": [0.7483320023630109, 3.3755571629956753]}};
+
+  // ===== State =====
+  let DATA = null;      // {rows:[{}], cols:[], numericCols:[]}
+  let LAST = null;      // last result object for downloads
+
+  // ===== Utilities: stats special functions =====
+  function gammln(xx){
+    const cof=[76.18009172947146,-86.50532032941677,24.01409824083091,-1.231739572450155,0.1208650973866179e-2,-0.5395239384953e-5];
+    let x=xx,y=xx,tmp=x+5.5; tmp-=(x+0.5)*Math.log(tmp); let ser=1.000000000190015;
+    for(let j=0;j<6;j++){y++;ser+=cof[j]/y;} return -tmp+Math.log(2.5066282746310005*ser/x);
+  }
+  function betacf(a,b,x){
+    const MAXIT=300,EPS=3e-14,FPMIN=1e-300;
+    let qab=a+b,qap=a+1,qam=a-1,c=1,d=1-qab*x/qap;
+    if(Math.abs(d)<FPMIN)d=FPMIN; d=1/d; let h=d;
+    for(let m=1;m<=MAXIT;m++){
+      let m2=2*m, aa=m*(b-m)*x/((qam+m2)*(a+m2));
+      d=1+aa*d; if(Math.abs(d)<FPMIN)d=FPMIN; c=1+aa/c; if(Math.abs(c)<FPMIN)c=FPMIN; d=1/d; h*=d*c;
+      aa=-(a+m)*(qab+m)*x/((a+m2)*(qap+m2));
+      d=1+aa*d; if(Math.abs(d)<FPMIN)d=FPMIN; c=1+aa/c; if(Math.abs(c)<FPMIN)c=FPMIN; d=1/d;
+      let del=d*c; h*=del; if(Math.abs(del-1)<EPS)break;
+    }
+    return h;
+  }
+  function betai(a,b,x){
+    if(x<=0)return 0; if(x>=1)return 1;
+    const bt=Math.exp(gammln(a+b)-gammln(a)-gammln(b)+a*Math.log(x)+b*Math.log(1-x));
+    return x<(a+1)/(a+b+2) ? bt*betacf(a,b,x)/a : 1-bt*betacf(b,a,1-x)/b;
+  }
+  const tSF2=(t,v)=>betai(v/2,0.5, v/(v+t*t));          // P(|T|>|t|)
+  const fSF =(f,d1,d2)=> f<=0?1:betai(d2/2,d1/2, d2/(d2+d1*f)); // P(F>f)
+  const tcdf=(x,v)=>1-0.5*tSF2(Math.abs(x),v);
+  function tinv975(v){ let lo=0,hi=1e4; for(let i=0;i<200;i++){let m=(lo+hi)/2; (tcdf(m,v)<0.975)?lo=m:hi=m;} return (lo+hi)/2; }
+
+  // ===== Matrix helpers =====
+  function matInv(A){ // Gauss-Jordan, returns inverse or null
+    const n=A.length, M=A.map((r,i)=>r.concat(Array.from({length:n},(_,j)=>i===j?1:0)));
+    for(let col=0;col<n;col++){
+      let piv=col; for(let r=col+1;r<n;r++) if(Math.abs(M[r][col])>Math.abs(M[piv][col])) piv=r;
+      if(Math.abs(M[piv][col])<1e-12) return null;
+      [M[col],M[piv]]=[M[piv],M[col]];
+      const d=M[col][col]; for(let j=0;j<2*n;j++) M[col][j]/=d;
+      for(let r=0;r<n;r++){ if(r===col)continue; const f=M[r][col]; if(f!==0) for(let j=0;j<2*n;j++) M[r][j]-=f*M[col][j]; }
+    }
+    return M.map(r=>r.slice(n));
+  }
+
+  // ===== OLS engine (closed form, HC-free classical SEs) =====
+  function runOLS(rows, yName, xNames){
+    // listwise deletion on used columns
+    const used=[yName,...xNames];
+    const clean=rows.filter(r=>used.every(c=>r[c]!==null && r[c]!==undefined && r[c]!=='' && !isNaN(Number(r[c]))));
+    const n=clean.length;
+    const k=xNames.length+1; // + intercept
+    if(n<=k) throw new Error('Not enough complete observations ('+n+') for '+k+' parameters.');
+    const y=clean.map(r=>Number(r[yName]));
+    const X=clean.map(r=>[1,...xNames.map(c=>Number(r[c]))]);
+    // XtX and Xty
+    const XtX=Array.from({length:k},()=>Array(k).fill(0));
+    const Xty=Array(k).fill(0);
+    for(let i=0;i<n;i++){ for(let a=0;a<k;a++){ Xty[a]+=X[i][a]*y[i]; for(let b=0;b<k;b++) XtX[a][b]+=X[i][a]*X[i][b]; } }
+    const XtXi=matInv(XtX);
+    if(!XtXi) throw new Error('Design matrix is singular (perfect collinearity among predictors).');
+    const beta=XtXi.map((row)=>row.reduce((s,v,j)=>s+v*Xty[j],0));
+    // residuals and fit
+    const yhat=X.map(xi=>xi.reduce((s,v,j)=>s+v*beta[j],0));
+    const resid=y.map((v,i)=>v-yhat[i]);
+    const ybar=y.reduce((s,v)=>s+v,0)/n;
+    const sse=resid.reduce((s,v)=>s+v*v,0);
+    const sst=y.reduce((s,v)=>s+(v-ybar)*(v-ybar),0);
+    const ssm=sst-sse;
+    const dfM=k-1, dfR=n-k;
+    const sigma2=sse/dfR;
+    const se=beta.map((_,j)=>Math.sqrt(sigma2*XtXi[j][j]));
+    const tcrit=tinv975(dfR);
+    const names=['const',...xNames];
+    const coefs=names.map((nm,j)=>({
+      name:nm, coef:beta[j], se:se[j], t:beta[j]/se[j],
+      p:tSF2(beta[j]/se[j],dfR), lo:beta[j]-tcrit*se[j], hi:beta[j]+tcrit*se[j]
+    }));
+    const r2=ssm/sst, adj=1-(1-r2)*(n-1)/dfR;
+    const F=(ssm/dfM)/(sse/dfR), pF=fSF(F,dfM,dfR);
+    return {method:'OLS', engine:'JavaScript (closed form)', yName, xNames, n, k, dfM, dfR,
+      coefs, r2, adj, F, pF, rmse:Math.sqrt(sigma2), sse, sst, ssm,
+      dropped: rows.length-n };
+  }
+
+  // ===== Pyodide (real statsmodels) =====
+  let pyodideReady=null;
+  async function ensurePyodide(log){
+    if(pyodideReady) return pyodideReady;
+    log('Loading Pyodide runtime...');
+    // eslint-disable-next-line no-undef
+    await new Promise((res,rej)=>{ const s=document.createElement('script'); s.src='https://cdn.jsdelivr.net/pyodide/v0.26.2/full/pyodide.js'; s.onload=res; s.onerror=()=>rej(new Error('Failed to load Pyodide script')); document.head.appendChild(s); });
+    log('Starting Python...');
+    const py=await loadPyodide({indexURL:'https://cdn.jsdelivr.net/pyodide/v0.26.2/full/'});
+    log('Loading pandas + statsmodels (first run downloads ~20MB)...');
+    await py.loadPackage(['pandas','statsmodels']);
+    pyodideReady=py; return py;
+  }
+  async function runOLS_py(rows,yName,xNames,log){
+    const py=await ensurePyodide(log);
+    log('Fitting statsmodels.OLS...');
+    py.globals.set('payload', JSON.stringify({rows,y:yName,x:xNames}));
+    const code=`
+import json, numpy as np, pandas as pd, statsmodels.api as sm
+p=json.loads(payload); df=pd.DataFrame(p['rows'])
+cols=[p['y']]+p['x']
+for c in cols: df[c]=pd.to_numeric(df[c],errors='coerce')
+d=df.dropna(subset=cols)
+X=sm.add_constant(d[p['x']].astype(float)); yv=d[p['y']].astype(float)
+m=sm.OLS(yv,X).fit()
+names=['const']+p['x']
+out={'method':'OLS','engine':'Python statsmodels (Pyodide)','yName':p['y'],'xNames':p['x'],
+ 'n':int(m.nobs),'k':int(len(names)),'dfM':int(m.df_model),'dfR':int(m.df_resid),
+ 'r2':float(m.rsquared),'adj':float(m.rsquared_adj),'F':float(m.fvalue),'pF':float(m.f_pvalue),
+ 'rmse':float(np.sqrt(m.scale)),'sse':float(m.ssr),'sst':float(m.centered_tss),'ssm':float(m.ess),
+ 'dropped':int(len(df)-m.nobs),
+ 'coefs':[{'name':nm,'coef':float(m.params[nm]),'se':float(m.bse[nm]),'t':float(m.tvalues[nm]),
+   'p':float(m.pvalues[nm]),'lo':float(m.conf_int().loc[nm][0]),'hi':float(m.conf_int().loc[nm][1])} for nm in names]}
+json.dumps(out)`;
+    const res=await py.runPythonAsync(code);
+    return JSON.parse(res);
+  }
+
+  // ===== Recommendation (rules-based) =====
+  function isBinary(vals){ const u=[...new Set(vals)]; return u.length===2; }
+  function recommend(yName,xNames){
+    if(!yName) return {method:'ols', text:'Select a dependent variable to receive a recommendation.'};
+    const yv=DATA.rows.map(r=>Number(r[yName])).filter(v=>!isNaN(v));
+    const uniq=new Set(yv).size;
+    const allInt=yv.every(v=>Number.isInteger(v));
+    const nonneg=yv.every(v=>v>=0);
+    let method='ols', why='';
+    if(isBinary(yv)){ method='logit'; why='the outcome takes exactly two values, so a binary logistic model is appropriate.'; }
+    else if(allInt && nonneg && uniq>2 && Math.max(...yv)<50 && uniq<20){ method='poisson'; why='the outcome is a small non-negative count, which suits a Poisson (or negative-binomial) model.'; }
+    else { method='ols'; why='the outcome is continuous, so ordinary least squares (linear regression) is the natural starting model.'; }
+    const label={ols:'Linear regression (OLS)',logit:'Logistic regression',poisson:'Poisson regression',mlogit:'Multinomial logit',probit:'Probit',quantile:'Quantile regression'}[method];
+    return {method, text:`For <span class="mono">${yName}</span> on ${xNames.length?xNames.map(x=>'<span class=\"mono\">'+x+'</span>').join(', '):'the selected predictors'}, BARD AI recommends <b>${label}</b> because ${why}`};
+  }
+
+  // ===== Data loading =====
+  function detectCols(rows){
+    const cols=Object.keys(rows[0]||{});
+    const numericCols=cols.filter(c=>{
+      const vals=rows.map(r=>r[c]).filter(v=>v!==null&&v!==undefined&&v!=='');
+      const num=vals.filter(v=>!isNaN(Number(v)));
+      return vals.length>0 && num.length/vals.length>0.8;
+    });
+    return {cols,numericCols};
+  }
+  function setData(rows, sourceName){
+    if(!rows||!rows.length){ setStatus('Could not read any rows from the file.','err'); return; }
+    const {cols,numericCols}=detectCols(rows);
+    DATA={rows,cols,numericCols};
+    setStatus(`Loaded <b>${sourceName}</b> &middot; ${rows.length} rows &times; ${cols.length} columns &middot; ${numericCols.length} numeric`,'ok');
+    renderPreview(rows,cols);
+    populateVarSelectors(sourceName);
+    document.getElementById('runBtn').disabled=false;
+    updateReco();
+  }
+  function renderPreview(rows,cols){
+    const t=document.getElementById('previewTable');
+    let h='<thead><tr class="bg-teal-50 text-teal-800">'+cols.map(c=>`<th class="text-left border-b border-gray-100">${c}</th>`).join('')+'</tr></thead><tbody>';
+    rows.slice(0,5).forEach(r=>{ h+='<tr class="border-b border-gray-50">'+cols.map(c=>`<td>${r[c]??''}</td>`).join('')+'</tr>'; });
+    t.innerHTML=h+'</tbody>'; document.getElementById('previewWrap').classList.remove('hidden');
+  }
+  function populateVarSelectors(sourceName){
+    const dep=document.getElementById('depVar'), ind=document.getElementById('indepVars');
+    const opts=DATA.numericCols;
+    dep.innerHTML=opts.map(c=>`<option value="${c}">${c}</option>`).join('');
+    ind.innerHTML=opts.map(c=>`<option value="${c}">${c}</option>`).join('');
+    // Prefill the canonical Example-1 spec when the sample is loaded
+    const isAuto = /auto/i.test(sourceName) && ['price','mpg','headroom','weight'].every(c=>opts.includes(c));
+    if(isAuto){
+      dep.value='price';
+      [...ind.options].forEach(o=>o.selected=['mpg','headroom','weight'].includes(o.value));
+      document.getElementById('taskText').value='Run an OLS regression of price on mpg, headroom and weight.';
+    } else {
+      dep.value=opts[0]||'';
+      [...ind.options].forEach((o,i)=>o.selected=(i>0&&i<4));
+    }
+  }
+  function selectedX(){ return [...document.getElementById('indepVars').selectedOptions].map(o=>o.value); }
+
+  function b64ToBytes(b64){ const bin=atob(b64); const a=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++)a[i]=bin.charCodeAt(i); return a; }
+  function parseArrayBuffer(ab, name){
+    const wb=XLSX.read(ab,{type:'array'});
+    const ws=wb.Sheets[wb.SheetNames[0]];
+    const rows=XLSX.utils.sheet_to_json(ws,{defval:null});
+    setData(rows, name);
+  }
+  document.getElementById('fileInput').addEventListener('change',e=>{
+    const f=e.target.files[0]; if(!f)return;
+    const rd=new FileReader();
+    rd.onload=()=>{ try{ parseArrayBuffer(rd.result, f.name); }catch(err){ setStatus('Parse error: '+err.message,'err'); } };
+    rd.readAsArrayBuffer(f);
+  });
+  document.getElementById('loadSample').addEventListener('click',()=>{
+    try{ const bytes=b64ToBytes(AUTO_XLSX_B64); parseArrayBuffer(bytes.buffer,'auto.xlsx (sample)'); }
+    catch(err){ setStatus('Could not load sample: '+err.message,'err'); }
+  });
+  document.getElementById('downloadSample').addEventListener('click',()=>{
+    const blob=new Blob([b64ToBytes(AUTO_XLSX_B64)],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+    triggerDownload(blob,'auto.xlsx');
+  });
+
+  function setStatus(html,kind){
+    const el=document.getElementById('dataStatus');
+    const c=kind==='ok'?'text-teal-700':kind==='err'?'text-red-600':'text-gray-500';
+    el.innerHTML=`<span class="${c}">${html}</span>`;
+  }
+
+  // ===== Reco update on selection change =====
+  function updateReco(){
+    if(!DATA)return;
+    const rec=recommend(document.getElementById('depVar').value, selectedX());
+    document.getElementById('recoPanel').classList.remove('hidden');
+    document.getElementById('recoBody').innerHTML=rec.text;
+    // In "suggest" or "both" mode, sync the dropdown to the recommendation
+    const mode=document.querySelector('input[name=mode]:checked').value;
+    if(mode!=='force'){ document.getElementById('analysisType').value=rec.method; }
+  }
+  ['depVar','indepVars','analysisType'].forEach(id=>document.getElementById(id).addEventListener('change',updateReco));
+  document.querySelectorAll('input[name=mode]').forEach(r=>r.addEventListener('change',updateReco));
+
+  // ===== Run =====
+  document.getElementById('runBtn').addEventListener('click',async()=>{
+    if(!DATA)return;
+    const mode=document.querySelector('input[name=mode]:checked').value;
+    const chosen=document.getElementById('analysisType').value;
+    const engine=document.getElementById('engine').value;
+    const yName=document.getElementById('depVar').value;
+    const xNames=selectedX();
+    const rec=recommend(yName,xNames);
+    const content=document.getElementById('resultsContent');
+    const empty=document.getElementById('resultsEmpty');
+    empty.classList.add('hidden'); content.classList.remove('hidden');
+
+    // Decide which method(s) to run
+    let methodsToRun=[];
+    if(mode==='suggest') methodsToRun=[{tag:'BARD AI recommendation',method:rec.method}];
+    else if(mode==='force') methodsToRun=[{tag:'Your forced choice',method:chosen}];
+    else methodsToRun=[{tag:'BARD AI recommendation',method:rec.method},{tag:'Your forced choice',method:chosen}];
+    // de-dup identical
+    const seen=new Set(); methodsToRun=methodsToRun.filter(m=>{const k=m.method; if(seen.has(k))return false; seen.add(k); return true;});
+
+    const log=(m)=>{ content.innerHTML=`<div class="flex items-center gap-2 text-teal-700 text-sm p-4"><svg class="w-4 h-4 spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M12 3a9 9 0 100 18"/></svg>${m}</div>`; };
+
+    const blocks=[];
+    for(const mr of methodsToRun){
+      if(mr.method!=='ols'){
+        blocks.push(nonOlsNotice(mr));
+        continue;
+      }
+      try{
+        let res;
+        if(engine==='pyodide'){ res=await runOLS_py(DATA.rows,yName,xNames,log); }
+        else { res=runOLS(DATA.rows,yName,xNames); }
+        res._tag=mr.tag;
+        LAST=res;
+        blocks.push(renderResult(res));
+      }catch(err){
+        blocks.push(`<div class="bg-red-50 border border-red-200 text-red-700 rounded-xl p-4 text-sm">Error: ${err.message}</div>`);
+      }
+    }
+    content.innerHTML=blocks.join('<div class="h-4"></div>');
+    document.getElementById('resultActions').classList.remove('hidden');
+    document.getElementById('resultActions').classList.add('flex');
+    if(LAST) runSelfTest(yName,xNames);
+  });
+
+  function nonOlsNotice(mr){
+    const label={logit:'Logistic regression',mlogit:'Multinomial logit',poisson:'Poisson regression',probit:'Probit',quantile:'Quantile regression'}[mr.method]||mr.method;
+    return `<div class="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-800">
+      <b>${mr.tag}: ${label}</b><br/>This method runs on the hybrid Python/Stata backend, which is not part of this static
+      prototype. The request specification is prepared and would be dispatched to <span class="mono">/api/analyze</span>.
+      OLS is fully functional here as the reference example.</div>`;
+  }
+
+  // ===== Rendering =====
+  const f=(x,d=4)=>{ if(x===null||x===undefined||isNaN(x))return ''; const a=Math.abs(x);
+    if(a!==0&&(a>=1e5||a<1e-4)) return x.toExponential(3);
+    return x.toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d}); };
+  const stars=p=> p<0.001?'***':p<0.01?'**':p<0.05?'*':p<0.1?'.':'';
+
+  function renderResult(r){
+    const rowsHtml=r.coefs.map(c=>`<tr class="border-b border-gray-100">
+      <td class="mono font-medium text-teal-800">${c.name}</td>
+      <td class="mono text-right">${f(c.coef)}</td>
+      <td class="mono text-right">${f(c.se)}</td>
+      <td class="mono text-right">${f(c.t,3)}</td>
+      <td class="mono text-right ${c.p<0.05?'text-teal-700 font-semibold':''}">${f(c.p,3)}<span class="text-accent">${stars(c.p)}</span></td>
+      <td class="mono text-right text-gray-500">${f(c.lo,2)}</td>
+      <td class="mono text-right text-gray-500">${f(c.hi,2)}</td>
+    </tr>`).join('');
+    const sig=r.coefs.filter(c=>c.name!=='const'&&c.p<0.05).map(c=>c.name);
+    return `<div class="bg-white border border-gray-200 rounded-xl p-4 animate-fadeInUp">
+      <div class="flex items-center justify-between mb-2">
+        <span class="text-xs font-semibold uppercase tracking-wide text-accent">${r._tag||'Result'}</span>
+        <span class="text-[11px] text-gray-400">${r.engine}</span>
+      </div>
+      <div class="mono text-sm font-semibold text-teal-800 mb-3">${r.yName} ~ ${r.xNames.join(' + ')}  (OLS)</div>
+      <div class="overflow-auto">
+      <table class="reg w-full text-xs border-t border-gray-200">
+        <thead><tr class="text-gray-500 text-[11px] uppercase">
+          <th class="text-left">Term</th><th class="text-right">Coef.</th><th class="text-right">Std.Err.</th>
+          <th class="text-right">t</th><th class="text-right">P&gt;|t|</th><th class="text-right">[0.025</th><th class="text-right">0.975]</th>
+        </tr></thead><tbody>${rowsHtml}</tbody>
+      </table></div>
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-4 text-center">
+        ${stat('N', r.n)}${stat('R²', f(r.r2,4))}${stat('Adj R²', f(r.adj,4))}${stat('RMSE', f(r.rmse,2))}
+        ${stat('F('+r.dfM+','+r.dfR+')', f(r.F,2))}${stat('Prob>F', f(r.pF,4))}${stat('Model df', r.dfM)}${stat('Resid df', r.dfR)}
+      </div>
+      ${r.dropped?`<p class="text-[11px] text-amber-600 mt-2">${r.dropped} row(s) dropped for missing/non-numeric values (listwise).</p>`:''}
+      <div class="mt-3 text-xs text-gray-600 leading-relaxed">
+        <b>Interpretation.</b> ${sig.length?`At the 5% level, ${sig.map(s=>'<span class=\"mono\">'+s+'</span>').join(', ')} ${sig.length>1?'are':'is'} significantly associated with <span class="mono">${r.yName}</span>. `:'No predictor reaches significance at the 5% level. '}
+        The model explains ${(r.r2*100).toFixed(1)}% of the variation in <span class="mono">${r.yName}</span> (overall F test p=${f(r.pF,4)}).
+      </div>
+      <div class="text-[11px] text-gray-400 mt-2">Signif: *** 0.001 &middot; ** 0.01 &middot; * 0.05 &middot; . 0.10</div>
+    </div>`;
+  }
+  const stat=(k,v)=>`<div class="bg-teal-50 rounded-lg py-2"><div class="text-[10px] uppercase tracking-wide text-teal-600">${k}</div><div class="mono font-bold text-teal-900 text-sm">${v}</div></div>`;
+
+  // ===== Self-test: verify JS engine vs statsmodels reference =====
+  function runSelfTest(yName,xNames){
+    const el=document.getElementById('selftest');
+    const isAuto = /auto/i.test((document.getElementById('dataStatus').textContent||'')) &&
+      yName==='price' && ['mpg','headroom','weight'].every(x=>xNames.includes(x)) && xNames.length===3 &&
+      document.getElementById('engine').value==='js';
+    if(!isAuto){ el.classList.add('hidden'); return; }
+    const r=runOLS(DATA.rows,'price',['mpg','headroom','weight']);
+    let maxRel=0; const checks=[];
+    const cmp=(label,got,exp)=>{ const rel=Math.abs(exp)>1e-9?Math.abs(got-exp)/Math.abs(exp):Math.abs(got-exp); maxRel=Math.max(maxRel,rel); checks.push({label,got,exp,rel}); };
+    cmp('R²',r.r2,OLS_REF.r2); cmp('Adj R²',r.adj,OLS_REF.adj_r2); cmp('F',r.F,OLS_REF.F); cmp('Prob>F',r.pF,OLS_REF.prob_F); cmp('RMSE',r.rmse,OLS_REF.rmse);
+    ['const','mpg','headroom','weight'].forEach(nm=>{ const c=r.coefs.find(x=>x.name===nm);
+      cmp('b['+nm+']',c.coef,OLS_REF.params[nm]); cmp('se['+nm+']',c.se,OLS_REF.bse[nm]); cmp('p['+nm+']',c.p,OLS_REF.p[nm]); });
+    const pass=maxRel<1e-6;
+    el.classList.remove('hidden');
+    el.innerHTML=`<div class="rounded-xl p-3 border ${pass?'bg-teal-50 border-teal-200':'bg-red-50 border-red-200'}">
+      <div class="flex items-center gap-2 font-semibold ${pass?'text-teal-800':'text-red-700'}">
+        ${pass?'✓ Verified against statsmodels':'✗ Verification failed'}
+        <span class="text-[11px] font-normal ${pass?'text-teal-600':'text-red-500'}">max relative error ${maxRel.toExponential(2)} across ${checks.length} quantities</span>
+      </div>
+      <div class="text-[11px] text-gray-500 mt-1">JavaScript OLS output matches the Python <span class="mono">statsmodels.OLS</span> baseline (coefficients, standard errors, p-values, R², F) to ${pass?'6+ significant figures':'the shown tolerance'}.</div>
+    </div>`;
+  }
+
+  // ===== Downloads =====
+  function triggerDownload(blob,name){ const u=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=u; a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(u),1500); }
+  function stataText(r){
+    const pad=(s,w,r=true)=>{ s=String(s); return r? s.padStart(w): s.padEnd(w); };
+    let o='';
+    o+='BARD AInalytics  |  Ordinary Least Squares\n';
+    o+='Engine: '+r.engine+'\n';
+    o+='Generated: '+new Date().toISOString()+'\n';
+    o+='Model: '+r.yName+' ~ '+r.xNames.join(' + ')+'\n';
+    o+=''.padEnd(78,'=')+'\n';
+    o+='Number of obs = '+r.n+'      F('+r.dfM+', '+r.dfR+') = '+r.F.toFixed(2)+'\n';
+    o+='R-squared     = '+r.r2.toFixed(4)+'   Prob > F      = '+r.pF.toExponential(4)+'\n';
+    o+='Adj R-squared = '+r.adj.toFixed(4)+'   Root MSE      = '+r.rmse.toFixed(3)+'\n';
+    o+=''.padEnd(78,'-')+'\n';
+    o+=pad('Variable',12,false)+pad('Coef.',14)+pad('Std.Err.',13)+pad('t',9)+pad('P>|t|',9)+pad('[95% CI]',20)+'\n';
+    o+=''.padEnd(78,'-')+'\n';
+    r.coefs.forEach(c=>{ o+=pad(c.name,12,false)+pad(c.coef.toFixed(5),14)+pad(c.se.toFixed(5),13)+pad(c.t.toFixed(3),9)+pad(c.p.toFixed(4),9)+pad(c.lo.toFixed(2)+', '+c.hi.toFixed(2),20)+'\n'; });
+    o+=''.padEnd(78,'=')+'\n';
+    return o;
+  }
+  function csvText(r){
+    let o='term,coef,std_err,t,p_value,ci_low,ci_high\n';
+    r.coefs.forEach(c=>o+=[c.name,c.coef,c.se,c.t,c.p,c.lo,c.hi].join(',')+'\n');
+    o+='\n# model,'+r.yName+' ~ '+r.xNames.join(' + ')+'\n';
+    o+='# n,'+r.n+'\n# r_squared,'+r.r2+'\n# adj_r_squared,'+r.adj+'\n# F,'+r.F+'\n# prob_F,'+r.pF+'\n# rmse,'+r.rmse+'\n# engine,'+r.engine+'\n';
+    return o;
+  }
+  function htmlReport(r){
+    const rows=r.coefs.map(c=>`<tr><td>${c.name}</td><td>${f(c.coef)}</td><td>${f(c.se)}</td><td>${f(c.t,3)}</td><td>${f(c.p,3)}</td><td>${f(c.lo,2)}</td><td>${f(c.hi,2)}</td></tr>`).join('');
+    return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>BARD AInalytics — OLS Results</title>
+    <style>body{font-family:Inter,Arial,sans-serif;margin:40px;color:#0a2a2e}h1{color:#0f7b8e}table{border-collapse:collapse;width:100%;font-family:monospace;font-size:13px}td,th{border:1px solid #cbd5e1;padding:6px 10px;text-align:right}td:first-child,th:first-child{text-align:left}th{background:#f0fdfa}.k{display:inline-block;margin:4px 16px 4px 0}</style></head>
+    <body><h1>BARD AInalytics — Ordinary Least Squares</h1>
+    <p><b>Model:</b> <code>${r.yName} ~ ${r.xNames.join(' + ')}</code><br><b>Engine:</b> ${r.engine}<br><b>Generated:</b> ${new Date().toLocaleString()}</p>
+    <p><span class="k"><b>N</b> ${r.n}</span><span class="k"><b>R²</b> ${f(r.r2,4)}</span><span class="k"><b>Adj R²</b> ${f(r.adj,4)}</span><span class="k"><b>F(${r.dfM},${r.dfR})</b> ${f(r.F,2)}</span><span class="k"><b>Prob&gt;F</b> ${f(r.pF,4)}</span><span class="k"><b>RMSE</b> ${f(r.rmse,2)}</span></p>
+    <table><thead><tr><th>Term</th><th>Coef.</th><th>Std.Err.</th><th>t</th><th>P&gt;|t|</th><th>[0.025</th><th>0.975]</th></tr></thead><tbody>${rows}</tbody></table>
+    <p style="color:#64748b;font-size:12px;margin-top:20px">Generated by BARD AInalytics prototype. OLS verified against Python statsmodels.</p></body></html>`;
+  }
+  document.getElementById('dlTxt').addEventListener('click',()=>{ if(LAST) triggerDownload(new Blob([stataText(LAST)],{type:'text/plain'}),'bard_ols_results.txt'); });
+  document.getElementById('dlCsv').addEventListener('click',()=>{ if(LAST) triggerDownload(new Blob([csvText(LAST)],{type:'text/csv'}),'bard_ols_results.csv'); });
+  document.getElementById('dlHtml').addEventListener('click',()=>{ if(LAST) triggerDownload(new Blob([htmlReport(LAST)],{type:'text/html'}),'bard_ols_report.html'); });
+  document.getElementById('popout').addEventListener('click',()=>{ if(!LAST)return; const w=window.open('','_blank','width=760,height=680'); w.document.write(htmlReport(LAST)); w.document.close(); });
+
+  // ===== Smooth scroll to workbench =====
+  document.getElementById('ex1Card').addEventListener('click',()=>document.getElementById('workbench').scrollIntoView({behavior:'smooth'}));
+  </script>
+</body>
+</html>
